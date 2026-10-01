@@ -17,8 +17,13 @@ logs/
 
 # Local configuration / secrets
 .env
+.env.*
+!.env.example
 appsettings.Local.json
 appsettings.*.local.json
+appsettings.*.Local.json
+secrets.json
+*.secrets.json
 
 # SQL Server
 *.bak
@@ -36,6 +41,9 @@ coverage/
 # Temporary
 *.tmp
 *.temp
+*.swp
+*.swo
+*~
 
 # OS
 Thumbs.db

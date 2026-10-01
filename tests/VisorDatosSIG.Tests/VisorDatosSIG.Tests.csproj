@@ -18,4 +18,10 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\..\src\VisorDatosSIG.Domain\VisorDatosSIG.Domain.csproj" />
+    <ProjectReference Include="..\..\src\VisorDatosSIG.Application\VisorDatosSIG.Application.csproj" />
+    <ProjectReference Include="..\..\src\VisorDatosSIG.Infrastructure\VisorDatosSIG.Infrastructure.csproj" />
+  </ItemGroup>
+
 </Project>
