@@ -1,0 +1,43 @@
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# .NET
+bin/
+obj/
+
+# Build
+Debug/
+Release/
+
+# Logs
+*.log
+logs/
+
+# Local configuration / secrets
+.env
+appsettings.Local.json
+appsettings.*.local.json
+
+# SQL Server
+*.bak
+*.mdf
+*.ldf
+
+# Android output
+*.apk
+*.aab
+
+# Test results
+TestResults/
+coverage/
+
+# Temporary
+*.tmp
+*.temp
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
