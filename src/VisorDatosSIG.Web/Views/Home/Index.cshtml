@@ -1,8 +1,22 @@
-﻿@{
-    ViewData["Title"] = "Home Page";
+﻿@model IEnumerable<VisorDatosSIG.Web.Models.LayerCardViewModel>
+@{
+    ViewData["Title"] = "Panel de capas";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
-</div>
+<section class="dashboard-header">
+    <p class="eyebrow">VisorDatosSIG</p>
+    <h1>Catastro en diagnóstico</h1>
+    <p>Conteos consultados directamente desde las capas oficiales.</p>
+    <a class="btn btn-primary btn-lg" asp-controller="Visor" asp-action="Index">ABRIR VISOR</a>
+</section>
+<section class="layer-cards">
+@foreach (var layer in Model)
+{
+    <article class="layer-card">
+        <p>@layer.Name</p>
+        <strong>@layer.RecordCount.ToString("N0")</strong>
+        <span>registros oficiales</span>
+    </article>
+}
+</section>
+<aside class="diagnostic-notice">Modo diagnóstico: las capas se leen temporalmente desde los SHP. La persistencia definitiva SQL Server se encuentra en integración.</aside>

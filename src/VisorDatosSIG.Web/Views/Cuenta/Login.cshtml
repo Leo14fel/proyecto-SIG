@@ -1,0 +1,13 @@
+@model VisorDatosSIG.Web.Models.LoginViewModel
+@{ ViewData["Title"] = "Iniciar sesión"; Layout = "_LoginLayout"; }
+<section class="login-shell">
+  <div class="login-brand"><h1>VisorDatosSIG</h1><p>Consulta territorial basada en datos geográficos</p></div>
+  <form asp-action="Login" method="post" class="login-card">
+    <h2>Iniciar sesión</h2>
+    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <input asp-for="ReturnUrl" type="hidden" />
+    <div class="mb-3"><label asp-for="Login" class="form-label"></label><input asp-for="Login" class="form-control" autocomplete="username" autofocus /><span asp-validation-for="Login" class="text-danger"></span></div>
+    <div class="mb-4"><label asp-for="Password" class="form-label"></label><input asp-for="Password" class="form-control" autocomplete="current-password" /><span asp-validation-for="Password" class="text-danger"></span></div>
+    <button class="btn btn-primary w-100" type="submit">INICIAR SESIÓN</button>
+  </form>
+</section>

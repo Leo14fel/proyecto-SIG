@@ -1,0 +1,141 @@
+@{
+    ViewData["Title"] = "Visor cartográfico";
+}
+
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+<section class="viewer-shell">
+    <aside class="viewer-panel">
+        <p class="eyebrow">Demo técnica v0.1</p>
+        <h1>Visor cartográfico</h1>
+        <p class="viewer-intro">Datos oficiales servidos directamente desde Shapefiles.</p>
+        <div id="layer-controls" class="layer-controls" aria-label="Capas"></div>
+        <button id="full-extent" class="btn btn-outline-primary w-100">Ver extensión completa</button>
+        <div class="legend">
+            <h2>Leyenda</h2>
+            <p><i class="legend-swatch manzanas"></i>Manzanas</p>
+            <p><i class="legend-swatch lotes"></i>Lotes</p>
+            <p><i class="legend-swatch codigos-fijos"></i>Códigos Fijos</p>
+            <p><i class="legend-swatch vias"></i>Vías</p>
+        </div>
+        <div id="selection" class="selection-panel" hidden></div>
+        <p id="map-message" class="map-message" role="status"></p>
+        <div class="viewer-notice">Demo técnica v0.1 - datos servidos directamente desde SHP.<br />Persistencia SQL Server en integración.</div>
+    </aside>
+    <div id="map" aria-label="Mapa de capas catastrales"></div>
+</section>
+
+@section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script>
+        const map = L.map('map', { zoomControl: false }).setView([-16.5, -68.15], 13);
+        L.control.zoom({ position: 'topright' }).addTo(map);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            maxZoom: 20,
+            attribution: '&copy; OpenStreetMap contributors'
+        }).addTo(map);
+
+        const styles = {
+            'manzanas': { color: '#0f766e', weight: 1.4, fillColor: '#2dd4bf', fillOpacity: 0.12 },
+            'lotes': { color: '#b45309', weight: 1, fillColor: '#fbbf24', fillOpacity: 0.09 },
+            'codigos-fijos': { radius: 5, color: '#ffffff', weight: 1.5, fillColor: '#e11d48', fillOpacity: 1 },
+            'vias': { color: '#1d4ed8', weight: 2.5, opacity: 0.85 }
+        };
+        const layers = {};
+        const metadata = {};
+        let selected;
+        const controls = document.getElementById('layer-controls');
+        const message = document.getElementById('map-message');
+        const selection = document.getElementById('selection');
+
+        function setMessage(text, isError = false) {
+            message.textContent = text;
+            message.classList.toggle('error', isError);
+        }
+
+        function styleFor(key) {
+            return styles[key];
+        }
+
+        function resetSelected() {
+            if (selected) {
+                selected.layer.setStyle(styleFor(selected.key));
+            }
+        }
+
+        function showSelection(key, feature, layer) {
+            resetSelected();
+            selected = { key, layer };
+            layer.setStyle({ color: '#111827', weight: 3, fillOpacity: 0.42 });
+            const rows = Object.entries(feature.properties || {}).map(([name, value]) => `<dt>${name}</dt><dd>${value ?? '-'}</dd>`).join('');
+            selection.innerHTML = `<h2>${metadata[key].name}</h2><dl>${rows || '<dd>Sin atributos públicos.</dd>'}</dl>`;
+            selection.hidden = false;
+            layer.bindPopup(selection.innerHTML).openPopup();
+        }
+
+        function buildLayerControl(item) {
+            const id = `layer-${item.key}`;
+            const wrapper = document.createElement('label');
+            wrapper.className = 'layer-toggle';
+            wrapper.innerHTML = `<input id="${id}" type="checkbox" ${item.key !== 'lotes' ? 'checked' : ''}><span class="dot ${item.key}"></span><span><b>${item.name}</b><small>${item.recordCount.toLocaleString('es-BO')} registros</small></span><em id="state-${item.key}"></em>`;
+            wrapper.querySelector('input').addEventListener('change', event => event.target.checked ? loadLayer(item.key) : removeLayer(item.key));
+            controls.appendChild(wrapper);
+        }
+
+        function removeLayer(key) {
+            if (layers[key]) {
+                map.removeLayer(layers[key]);
+                delete layers[key];
+            }
+        }
+
+        async function loadLayer(key) {
+            if (layers[key]) return;
+            if (key === 'lotes' && map.getZoom() < 16) {
+                document.getElementById(`layer-${key}`).checked = false;
+                setMessage('Para cargar Lotes, acerque el mapa al nivel 16 o superior.', true);
+                return;
+            }
+            const state = document.getElementById(`state-${key}`);
+            state.textContent = 'Cargando';
+            setMessage('');
+            try {
+                let url = `/api/diagnostico/capas/${encodeURIComponent(key)}/geojson`;
+                if (key === 'lotes') {
+                    const bounds = map.getBounds();
+                    url += `?minX=${bounds.getWest()}&minY=${bounds.getSouth()}&maxX=${bounds.getEast()}&maxY=${bounds.getNorth()}`;
+                }
+                const response = await fetch(url);
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || data.detail || 'Error al cargar la capa.');
+                const group = L.geoJSON(data, {
+                    style: () => styleFor(key),
+                    pointToLayer: (_, latlng) => L.circleMarker(latlng, styleFor(key)),
+                    onEachFeature: (feature, layer) => layer.on('click', () => showSelection(key, feature, layer))
+                }).addTo(map);
+                layers[key] = group;
+                state.textContent = `${data.features.length.toLocaleString('es-BO')}`;
+                if (key === 'lotes' && data.features.length === data.metadata.maximumRecords) setMessage('Se muestran hasta 3.500 lotes dentro de la extensión actual. Desplácese o acerque el mapa para consultar otros.', false);
+            } catch (error) {
+                document.getElementById(`layer-${key}`).checked = false;
+                setMessage(error.message, true);
+            } finally {
+                if (!layers[key]) state.textContent = '';
+            }
+        }
+
+        fetch('/api/diagnostico/capas')
+            .then(response => response.json())
+            .then(items => {
+                items.forEach(item => { metadata[item.key] = item; buildLayerControl(item); });
+                const extent = items.map(item => item.boundingBox).find(Boolean);
+                if (extent) map.fitBounds([[extent[1], extent[0]], [extent[3], extent[2]]]);
+                ['manzanas', 'codigos-fijos', 'vias'].forEach(loadLayer);
+            })
+            .catch(() => setMessage('No fue posible consultar las capas de diagnóstico.', true));
+
+        document.getElementById('full-extent').addEventListener('click', () => {
+            const extent = Object.values(metadata).map(item => item.boundingBox).find(Boolean);
+            if (extent) map.fitBounds([[extent[1], extent[0]], [extent[3], extent[2]]]);
+        });
+    </script>
+}
