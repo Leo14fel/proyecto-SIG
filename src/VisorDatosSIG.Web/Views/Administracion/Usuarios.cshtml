@@ -1,0 +1,6 @@
+@model IEnumerable<VisorDatosSIG.Web.Models.UserAdministrationItem>
+@{ ViewData["Title"] = "Administración de usuarios"; }
+<h1>Usuarios</h1>
+<table class="table table-striped"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
+@foreach (var user in Model) { <tr><td>@user.Login</td><td>@user.Nombre</td><td>@user.Roles</td><td>@(user.Activo ? "Activo" : "Inactivo")</td><td><form asp-action="CambiarEstado" method="post"><input type="hidden" name="id" value="@user.Id" /><button class="btn btn-sm btn-outline-primary">@(user.Activo ? "Desactivar" : "Activar")</button></form></td></tr> }
+</tbody></table>

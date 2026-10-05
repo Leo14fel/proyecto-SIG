@@ -34,7 +34,7 @@ public interface IShapefileDiagnosticService
     ShapefileDiagnostics GetDiagnostics(string shapefilePath);
     ShapefileDiagnostics GetDiagnosticsForLayer(string layerKey);
     IReadOnlyList<ShapefileFeature> ReadFeaturesFromPath(string shapefilePath, int maximumRecords = 20);
-    IReadOnlyList<ShapefileFeature> ReadFeatures(string layerKey, Envelope? bounds = null, double? simplifyTolerance = null, int? maximumRecords = null);
+    IReadOnlyList<ShapefileFeature> ReadFeatures(string layerKey, Envelope? bounds = null, double? simplifyTolerance = null, int? maximumRecords = null, bool includeSystemFields = false, bool includeEmpty = false);
     string GetLayerPath(string layerKey);
 }
 
@@ -108,16 +108,16 @@ public sealed class ShapefileDiagnosticService : IShapefileDiagnosticService
         return new ShapefileDiagnostics(Path.GetFileNameWithoutExtension(path), path, hasShp, hasShx, hasDbf, hasPrj, recordCount, geometryType, boundingBox, fields, isPrjValid, prjStatus);
     }
 
-    public IReadOnlyList<ShapefileFeature> ReadFeatures(string layerKey, Envelope? bounds = null, double? simplifyTolerance = null, int? maximumRecords = null)
+    public IReadOnlyList<ShapefileFeature> ReadFeatures(string layerKey, Envelope? bounds = null, double? simplifyTolerance = null, int? maximumRecords = null, bool includeSystemFields = false, bool includeEmpty = false)
     {
         var path = GetLayerPath(layerKey);
-        return ReadFeaturesFromFile(path, bounds, simplifyTolerance, maximumRecords);
+        return ReadFeaturesFromFile(path, bounds, simplifyTolerance, maximumRecords, includeSystemFields, includeEmpty);
     }
 
     public IReadOnlyList<ShapefileFeature> ReadFeaturesFromPath(string shapefilePath, int maximumRecords = 20) =>
-        ReadFeaturesFromFile(shapefilePath, null, null, maximumRecords);
+        ReadFeaturesFromFile(shapefilePath, null, null, maximumRecords, false, false);
 
-    private IReadOnlyList<ShapefileFeature> ReadFeaturesFromFile(string path, Envelope? bounds, double? simplifyTolerance, int? maximumRecords)
+    private IReadOnlyList<ShapefileFeature> ReadFeaturesFromFile(string path, Envelope? bounds, double? simplifyTolerance, int? maximumRecords, bool includeSystemFields, bool includeEmpty)
     {
         var diagnostics = GetDiagnostics(path);
         EnsureComplete(diagnostics);
@@ -125,14 +125,14 @@ public sealed class ShapefileDiagnosticService : IShapefileDiagnosticService
         var features = new List<ShapefileFeature>();
         foreach (var feature in Shapefile.ReadAllFeatures(path, ReaderOptions))
         {
-            if (feature.Geometry is null || feature.Geometry.IsEmpty || bounds is not null && !feature.Geometry.EnvelopeInternal.Intersects(bounds))
+            if (feature.Geometry is null || !includeEmpty && feature.Geometry.IsEmpty || bounds is not null && !feature.Geometry.EnvelopeInternal.Intersects(bounds))
             {
                 continue;
             }
 
             var geometry = simplifyTolerance is > 0 ? DouglasPeuckerSimplifier.Simplify(feature.Geometry, simplifyTolerance.Value) : feature.Geometry;
             var attributes = feature.Attributes.GetNames()
-                .Where(IsPublicField)
+                .Where(name => includeSystemFields || IsPublicField(name))
                 .ToDictionary(name => name, name => NormalizeValue(feature.Attributes[name]));
             features.Add(new ShapefileFeature(geometry, attributes));
 

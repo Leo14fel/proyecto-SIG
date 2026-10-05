@@ -5,9 +5,47 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <section class="viewer-shell">
     <aside class="viewer-panel">
-        <p class="eyebrow">Demo técnica v0.1</p>
+        <p class="eyebrow">Datos espaciales SQL Server</p>
         <h1>Visor cartográfico</h1>
-        <p class="viewer-intro">Datos oficiales servidos directamente desde Shapefiles.</p>
+        <p class="viewer-intro">Capas oficiales consultadas desde SQL Server.</p>
+        <form id="search-form" class="map-search" role="search">
+            <h2>Buscar registros</h2>
+            <label for="search-layer">Filtro de capa</label>
+            <select id="search-layer" class="form-select form-select-sm" name="capa">
+                <option value="todas" selected>Todas</option>
+                <option value="codigos-fijos">Códigos Fijos</option>
+                <option value="manzanas">Manzanas</option>
+                <option value="lotes">Lotes</option>
+                <option value="vias">Vías</option>
+            </select>
+            <div id="advanced-filters" hidden>
+                <label for="search-field">Campo</label>
+                <select id="search-field" class="form-select form-select-sm" name="campo"></select>
+                <label for="search-operator">Operador</label>
+                <select id="search-operator" class="form-select form-select-sm" name="operador">
+                    <option value="contiene">Contiene</option>
+                    <option value="igual">Igual</option>
+                    <option value="comienza-con">Comienza con</option>
+                </select>
+            </div>
+            <label for="search-query">Texto a buscar</label>
+            <input id="search-query" class="form-control form-control-sm" name="q" type="search" maxlength="100" placeholder="Buscar persona, lote, manzana, código o vía..." required />
+            <label for="search-page-size">Resultados por página</label>
+            <select id="search-page-size" class="form-select form-select-sm" name="tamanoPagina">
+                <option value="25" selected>25</option><option value="50">50</option><option value="100">100</option>
+            </select>
+            <div class="map-search-actions">
+                <button class="btn btn-primary btn-sm" type="submit">Buscar</button>
+                <button id="clear-search" class="btn btn-outline-secondary btn-sm" type="button">Limpiar</button>
+            </div>
+        </form>
+        <section id="search-results" class="search-results" aria-live="polite" hidden>
+            <p id="active-filter" class="active-filter"></p>
+            <p id="search-status" class="search-status"></p>
+            <button id="export-search-results" class="btn btn-outline-secondary btn-sm" type="button" hidden>Exportar resultados a CSV</button>
+            <div id="search-items" class="search-items"></div>
+            <div id="search-pagination" class="search-pagination"></div>
+        </section>
         <div id="layer-controls" class="layer-controls" aria-label="Capas"></div>
         <button id="full-extent" class="btn btn-outline-primary w-100">Ver extensión completa</button>
         <div class="legend">
@@ -19,7 +57,7 @@
         </div>
         <div id="selection" class="selection-panel" hidden></div>
         <p id="map-message" class="map-message" role="status"></p>
-        <div class="viewer-notice">Demo técnica v0.1 - datos servidos directamente desde SHP.<br />Persistencia SQL Server en integración.</div>
+        <div class="viewer-notice">Lotes se carga por extensión visible y desde zoom 16 para preservar el rendimiento.</div>
     </aside>
     <div id="map" aria-label="Mapa de capas catastrales"></div>
 </section>
@@ -43,9 +81,37 @@
         const layers = {};
         const metadata = {};
         let selected;
+        let searchHighlight;
+        let searchAbort;
+        let searchState = { capa: 'todas', q: '', pagina: 1 };
         const controls = document.getElementById('layer-controls');
         const message = document.getElementById('map-message');
         const selection = document.getElementById('selection');
+        const searchForm = document.getElementById('search-form');
+        const searchLayer = document.getElementById('search-layer');
+        const searchQuery = document.getElementById('search-query');
+        const advancedFilters = document.getElementById('advanced-filters');
+        const searchField = document.getElementById('search-field');
+        const searchOperator = document.getElementById('search-operator');
+        const searchPageSize = document.getElementById('search-page-size');
+        const searchResults = document.getElementById('search-results');
+        const searchStatus = document.getElementById('search-status');
+        const activeFilter = document.getElementById('active-filter');
+        const exportSearchResults = document.getElementById('export-search-results');
+        const searchItems = document.getElementById('search-items');
+        const searchPagination = document.getElementById('search-pagination');
+        let currentSearchItems = [];
+        const fallbackSearchLayers = ['manzanas', 'lotes', 'codigos-fijos', 'vias'];
+        const searchableFields = {
+            'manzanas': ['UV_MZA', 'UV', 'MZA'], 'lotes': ['NroLote'],
+            'codigos-fijos': ['CodF_SIG', 'CodFijo', 'Nombre'], 'vias': ['Nombre', 'TipoVia', 'OSMID']
+        };
+        const csvFields = {
+            'manzanas': ['IdManzana', 'UV_MZA', 'UV', 'MZA'],
+            'lotes': ['IdLote', 'NroLote', 'IdManzana'],
+            'codigos-fijos': ['IdCodigo', 'CodF_SQL', 'CodF_SIG', 'CodFijo', 'Estado', 'IdLote'],
+            'vias': ['IdVia', 'OBJECTID', 'Nombre', 'TipoVia', 'OSMID']
+        };
 
         function setMessage(text, isError = false) {
             message.textContent = text;
@@ -62,22 +128,84 @@
             }
         }
 
+        function selectionContent(key, feature, layer) {
+            const content = document.createElement('div');
+            const heading = document.createElement('h2');
+            heading.textContent = metadata[key]?.name || key;
+            const list = document.createElement('dl');
+            const properties = Object.entries(feature.properties || {});
+            if (properties.length) {
+                properties.forEach(([name, value]) => {
+                    const term = document.createElement('dt');
+                    const description = document.createElement('dd');
+                    term.textContent = name;
+                    description.textContent = value ?? '-';
+                    list.append(term, description);
+                });
+            } else {
+                const description = document.createElement('dd');
+                description.textContent = 'Sin atributos públicos.';
+                list.appendChild(description);
+            }
+            const actions = document.createElement('div');
+            actions.className = 'selection-actions';
+            const zoom = document.createElement('button');
+            zoom.type = 'button';
+            zoom.className = 'btn btn-outline-primary btn-sm';
+            zoom.textContent = 'Acercar';
+            zoom.addEventListener('click', () => {
+                const bounds = layer.getBounds();
+                if (feature.geometry?.type === 'Point') map.flyTo(bounds.getCenter(), Math.max(map.getZoom(), 18));
+                else if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+            });
+            const clear = document.createElement('button');
+            clear.type = 'button';
+            clear.className = 'btn btn-outline-secondary btn-sm';
+            clear.textContent = 'Limpiar selección';
+            clear.addEventListener('click', clearSelection);
+            actions.append(zoom, clear);
+            content.append(heading, list, actions);
+            return content;
+        }
+
+        function clearSelection() {
+            resetSelected();
+            selected?.layer.closePopup();
+            selected = undefined;
+            selection.hidden = true;
+            highlightSearchResult('', '');
+        }
+
         function showSelection(key, feature, layer) {
             resetSelected();
             selected = { key, layer };
             layer.setStyle({ color: '#111827', weight: 3, fillOpacity: 0.42 });
-            const rows = Object.entries(feature.properties || {}).map(([name, value]) => `<dt>${name}</dt><dd>${value ?? '-'}</dd>`).join('');
-            selection.innerHTML = `<h2>${metadata[key].name}</h2><dl>${rows || '<dd>Sin atributos públicos.</dd>'}</dl>`;
+            highlightSearchResult(key, feature.id ?? feature.properties?.Id);
+            selection.replaceChildren(selectionContent(key, feature, layer));
             selection.hidden = false;
-            layer.bindPopup(selection.innerHTML).openPopup();
+            layer.bindPopup(selectionContent(key, feature, layer)).openPopup();
         }
 
         function buildLayerControl(item) {
             const id = `layer-${item.key}`;
             const wrapper = document.createElement('label');
             wrapper.className = 'layer-toggle';
-            wrapper.innerHTML = `<input id="${id}" type="checkbox" ${item.key !== 'lotes' ? 'checked' : ''}><span class="dot ${item.key}"></span><span><b>${item.name}</b><small>${item.recordCount.toLocaleString('es-BO')} registros</small></span><em id="state-${item.key}"></em>`;
-            wrapper.querySelector('input').addEventListener('change', event => event.target.checked ? loadLayer(item.key) : removeLayer(item.key));
+            const input = document.createElement('input');
+            input.id = id;
+            input.type = 'checkbox';
+            input.checked = item.key !== 'lotes';
+            const dot = document.createElement('span');
+            dot.className = `dot ${item.key}`;
+            const text = document.createElement('span');
+            const name = document.createElement('b');
+            name.textContent = item.name;
+            const count = document.createElement('small');
+            count.textContent = `${item.count.toLocaleString('es-BO')} registros`;
+            const state = document.createElement('em');
+            state.id = `state-${item.key}`;
+            text.append(name, count);
+            wrapper.append(input, dot, text, state);
+            input.addEventListener('change', event => event.target.checked ? loadLayer(item.key) : removeLayer(item.key));
             controls.appendChild(wrapper);
         }
 
@@ -99,7 +227,7 @@
             state.textContent = 'Cargando';
             setMessage('');
             try {
-                let url = `/api/diagnostico/capas/${encodeURIComponent(key)}/geojson`;
+                let url = `/api/capas/${encodeURIComponent(key)}/geojson`;
                 if (key === 'lotes') {
                     const bounds = map.getBounds();
                     url += `?minX=${bounds.getWest()}&minY=${bounds.getSouth()}&maxX=${bounds.getEast()}&maxY=${bounds.getNorth()}`;
@@ -117,13 +245,13 @@
                 if (key === 'lotes' && data.features.length === data.metadata.maximumRecords) setMessage('Se muestran hasta 3.500 lotes dentro de la extensión actual. Desplácese o acerque el mapa para consultar otros.', false);
             } catch (error) {
                 document.getElementById(`layer-${key}`).checked = false;
-                setMessage(error.message, true);
+                setMessage(`${error.message} Vuelva a activar la capa para reintentar.`, true);
             } finally {
                 if (!layers[key]) state.textContent = '';
             }
         }
 
-        fetch('/api/diagnostico/capas')
+        fetch('/api/capas')
             .then(response => response.json())
             .then(items => {
                 items.forEach(item => { metadata[item.key] = item; buildLayerControl(item); });
@@ -131,7 +259,202 @@
                 if (extent) map.fitBounds([[extent[1], extent[0]], [extent[3], extent[2]]]);
                 ['manzanas', 'codigos-fijos', 'vias'].forEach(loadLayer);
             })
-            .catch(() => setMessage('No fue posible consultar las capas de diagnóstico.', true));
+            .catch(() => setMessage('No fue posible consultar las capas SQL.', true));
+
+        function renderSearchResults(data) {
+            searchResults.hidden = false;
+            currentSearchItems = data.items;
+            activeFilter.textContent = `Filtro activo: ${data.capa === 'todas' ? 'Todas las capas' : metadata[data.capa]?.name || data.capa}`;
+            searchStatus.textContent = data.total
+                ? `Resultados: ${data.total.toLocaleString('es-BO')} · Página ${data.pagina} de ${Math.max(1, Math.ceil(data.total / data.tamanoPagina))}${data.allLayers ? ' por capa' : ''}`
+                : 'No se encontraron resultados.';
+            exportSearchResults.hidden = data.items.length === 0;
+            searchItems.replaceChildren();
+            searchPagination.replaceChildren();
+
+            data.items.forEach(item => {
+                const entry = document.createElement('article');
+                entry.className = 'search-result';
+                entry.setAttribute('role', 'option');
+                entry.setAttribute('aria-selected', 'false');
+                entry.dataset.layer = item.capa;
+                entry.dataset.id = String(item.id);
+                const title = document.createElement('strong');
+                title.textContent = `${metadata[item.capa]?.name || item.capa} #${item.id}`;
+                const details = document.createElement('p');
+                const values = Object.entries(item.properties || {}).slice(0, 3).map(([name, value]) => `${name}: ${value ?? '-'}`);
+                details.textContent = values.join(' · ') || 'Sin atributos públicos.';
+                const view = document.createElement('button');
+                view.type = 'button';
+                view.className = 'btn btn-outline-primary btn-sm';
+                view.textContent = 'Ver en mapa';
+                view.addEventListener('click', () => showSearchFeature(item.capa, item.id));
+                entry.append(title, details, view);
+                searchItems.appendChild(entry);
+            });
+
+            if (data.hasPrevious || data.hasNext || data.total > data.tamanoPagina) {
+                const previous = document.createElement('button');
+                previous.type = 'button';
+                previous.className = 'btn btn-outline-secondary btn-sm';
+                previous.textContent = 'Anterior';
+                previous.disabled = !data.hasPrevious && data.pagina === 1;
+                previous.addEventListener('click', () => search(data.pagina - 1));
+                const page = document.createElement('span');
+                page.className = 'search-page';
+                page.textContent = String(data.pagina);
+                const next = document.createElement('button');
+                next.type = 'button';
+                next.className = 'btn btn-outline-secondary btn-sm';
+                next.textContent = 'Siguiente';
+                next.disabled = data.hasNext === undefined ? data.pagina >= Math.ceil(data.total / data.tamanoPagina) : !data.hasNext;
+                next.addEventListener('click', () => search(data.pagina + 1));
+                searchPagination.append(previous, page, next);
+            }
+        }
+
+        async function search(page = 1) {
+            const q = searchQuery.value.trim();
+            if (!q) return;
+            searchAbort?.abort();
+            searchAbort = new AbortController();
+            searchState = { capa: searchLayer.value, q, pagina: page, campo: searchField.value, operador: searchOperator.value, tamanoPagina: searchPageSize.value };
+            searchResults.hidden = false;
+            searchItems.replaceChildren();
+            searchPagination.replaceChildren();
+            activeFilter.textContent = `Filtro activo: ${searchLayer.options[searchLayer.selectedIndex].text}`;
+            exportSearchResults.hidden = true;
+            searchStatus.textContent = 'Buscando...';
+            try {
+                const layerKeys = searchState.capa === 'todas'
+                    ? (Object.keys(metadata).length ? Object.keys(metadata) : fallbackSearchLayers)
+                    : [searchState.capa];
+                const responses = await Promise.all(layerKeys.map(async capa => {
+                    const params = new URLSearchParams({ capa, q, pagina: String(page), tamanoPagina: searchState.tamanoPagina });
+                    if (searchState.capa !== 'todas' && searchState.campo) {
+                        params.set('campo', searchState.campo);
+                        params.set('operador', searchState.operador);
+                    }
+                    const response = await fetch(`/api/busqueda?${params}`, { signal: searchAbort.signal });
+                    const result = await response.json();
+                    if (!response.ok) throw new Error(result.message || result.detail || 'No fue posible realizar la búsqueda.');
+                    return result;
+                }));
+                const data = responses.length === 1
+                    ? { ...responses[0], items: responses[0].items.map(item => ({ ...item, capa: responses[0].capa })) }
+                    : {
+                        capa: 'todas',
+                        total: responses.reduce((total, result) => total + result.total, 0),
+                        pagina: page,
+                        tamanoPagina: responses[0]?.tamanoPagina || 25,
+                        allLayers: true,
+                        hasPrevious: page > 1,
+                        hasNext: responses.some(result => result.pagina * result.tamanoPagina < result.total),
+                        items: responses.flatMap(result => result.items.map(item => ({ ...item, capa: result.capa })))
+                    };
+                renderSearchResults(data);
+            } catch (error) {
+                if (error.name === 'AbortError') return;
+                searchStatus.textContent = error.message;
+            }
+        }
+
+        async function showSearchFeature(key, id) {
+            setMessage('Cargando registro seleccionado...');
+            try {
+                const response = await fetch(`/api/capas/${encodeURIComponent(key)}/${encodeURIComponent(id)}`);
+                const feature = await response.json();
+                if (!response.ok) throw new Error(feature.message || 'No fue posible cargar el registro.');
+                if (!feature.geometry) throw new Error('El registro no tiene geometría para mostrar.');
+                if (!layers[key]) {
+                    const toggle = document.getElementById(`layer-${key}`);
+                    if (toggle) {
+                        toggle.checked = true;
+                        loadLayer(key);
+                    }
+                }
+                if (searchHighlight) map.removeLayer(searchHighlight);
+                searchHighlight = L.geoJSON(feature, {
+                    style: () => styleFor(key),
+                    pointToLayer: (_, latlng) => L.circleMarker(latlng, styleFor(key)),
+                    onEachFeature: (item, layer) => layer.on('click', () => showSelection(key, item, layer))
+                }).addTo(map);
+                const layer = searchHighlight.getLayers()[0];
+                showSelection(key, feature, layer);
+                const bounds = searchHighlight.getBounds();
+                if (feature.geometry.type === 'Point') map.flyTo(bounds.getCenter(), Math.max(map.getZoom(), 18));
+                else if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+                setMessage('Registro mostrado en el mapa.');
+            } catch (error) {
+                setMessage(error.message, true);
+            }
+        }
+
+        function highlightSearchResult(key, id) {
+            const selectedId = String(id);
+            searchItems.querySelectorAll('.search-result').forEach(entry => {
+                const isMatch = entry.dataset.layer === key && entry.dataset.id === selectedId;
+                entry.classList.toggle('is-selected', isMatch);
+                entry.setAttribute('aria-selected', String(isMatch));
+            });
+        }
+
+        function csvValue(value) {
+            const text = String(value ?? '');
+            const safeText = /^[=+\-\x40]/.test(text) ? `'${text}` : text;
+            return `"${safeText.replaceAll('"', '""')}"`;
+        }
+
+        function exportCurrentResults() {
+            const params = new URLSearchParams({ capa: searchState.capa, q: searchState.q });
+            if (searchState.capa !== 'todas' && searchState.campo) {
+                params.set('campo', searchState.campo);
+                params.set('operador', searchState.operador);
+            }
+            window.location.assign(`/api/busqueda/exportar?${params}`);
+        }
+
+        searchForm.addEventListener('submit', event => {
+            event.preventDefault();
+            search(1);
+        });
+
+        function populateFields() {
+            const fields = searchableFields[searchLayer.value] || [];
+            advancedFilters.hidden = fields.length === 0;
+            searchField.replaceChildren();
+            fields.forEach(field => {
+                const option = document.createElement('option');
+                option.value = field;
+                option.textContent = field;
+                searchField.appendChild(option);
+            });
+            updateOperators();
+        }
+
+        function updateOperators() {
+            const numeric = searchField.value === 'CodFijo';
+            searchOperator.querySelectorAll('option').forEach(option => option.hidden = numeric && option.value !== 'igual');
+            if (numeric) searchOperator.value = 'igual';
+        }
+
+        searchLayer.addEventListener('change', populateFields);
+        searchField.addEventListener('change', updateOperators);
+        populateFields();
+
+        document.getElementById('clear-search').addEventListener('click', () => {
+            searchAbort?.abort();
+            searchForm.reset();
+            searchLayer.value = 'todas';
+            searchResults.hidden = true;
+            activeFilter.textContent = '';
+            currentSearchItems = [];
+            exportSearchResults.hidden = true;
+            searchItems.replaceChildren();
+            searchPagination.replaceChildren();
+        });
+
+        exportSearchResults.addEventListener('click', exportCurrentResults);
 
         document.getElementById('full-extent').addEventListener('click', () => {
             const extent = Object.values(metadata).map(item => item.boundingBox).find(Boolean);

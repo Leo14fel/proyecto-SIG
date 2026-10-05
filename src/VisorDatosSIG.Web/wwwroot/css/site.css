@@ -54,6 +54,20 @@ body {
 .viewer-panel { z-index: 2; padding: 1.25rem; overflow-y: auto; background: #fff; }
 .viewer-panel h1 { margin: 0; color: #142f4a; font-size: 1.65rem; }
 .viewer-intro { color: #526075; font-size: .9rem; }
+.map-search { display: grid; gap: .45rem; margin: 1.25rem 0; padding: 1rem; border: 1px solid #dbe3ed; background: #f8fafc; }
+.map-search h2 { margin: 0 0 .15rem; color: #142f4a; font-size: .9rem; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; }
+.map-search label { color: #526075; font-size: .75rem; font-weight: 700; }
+.map-search-actions, .search-pagination, .selection-actions { display: flex; gap: .5rem; margin-top: .25rem; flex-wrap: wrap; }
+.search-results { margin: -.25rem 0 1.25rem; border-bottom: 1px solid #e2e8f0; }
+.search-status { margin: 0 0 .65rem; color: #526075; font-size: .8rem; }
+.active-filter { margin: 0 0 .35rem; color: #0f766e; font-size: .78rem; font-weight: 700; }
+#export-search-results { margin: 0 0 .65rem; }
+.search-items { display: grid; gap: .55rem; max-height: 275px; overflow-y: auto; }
+.search-result { padding: .7rem; border: 1px solid #e2e8f0; background: #fff; }
+.search-result.is-selected, .search-result[aria-selected="true"] { border-color: #0f766e; background: #f0fdfa; box-shadow: inset 3px 0 #0f766e; }
+.search-result strong { display: block; color: #142f4a; font-size: .8rem; }
+.search-result p { margin: .35rem 0 .55rem; color: #526075; font-size: .75rem; overflow-wrap: anywhere; }
+.search-pagination { margin: .75rem 0; }
 #map { min-height: 400px; background: #dce8f1; }
 .layer-controls { margin: 1.25rem 0; border-top: 1px solid #e2e8f0; }
 .layer-toggle { display: flex; align-items: center; gap: .6rem; padding: .72rem 0; border-bottom: 1px solid #e2e8f0; cursor: pointer; }

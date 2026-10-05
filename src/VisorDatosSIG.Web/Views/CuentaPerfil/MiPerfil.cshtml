@@ -1,0 +1,7 @@
+@model VisorDatosSIG.Web.Models.ChangePasswordViewModel
+@{ ViewData["Title"] = "Mi perfil"; }
+<h1>Mi perfil</h1>
+<dl><dt>Usuario</dt><dd>@ViewBag.Login</dd><dt>Nombre</dt><dd>@ViewBag.Nombre</dd><dt>Rol</dt><dd>@ViewBag.Roles</dd><dt>Estado</dt><dd>@ViewBag.Estado</dd></dl>
+@if (TempData["Success"] is string success) { <p class="alert alert-success">@success</p> }
+<h2>Cambiar contraseña</h2>
+<form asp-action="MiPerfil" method="post" class="col-md-6"><div asp-validation-summary="ModelOnly" class="text-danger"></div><label asp-for="CurrentPassword"></label><input asp-for="CurrentPassword" class="form-control" /><span asp-validation-for="CurrentPassword" class="text-danger"></span><label asp-for="NewPassword"></label><input asp-for="NewPassword" class="form-control" /><span asp-validation-for="NewPassword" class="text-danger"></span><label asp-for="ConfirmPassword"></label><input asp-for="ConfirmPassword" class="form-control" /><span asp-validation-for="ConfirmPassword" class="text-danger"></span><button class="btn btn-primary mt-3">Actualizar contraseña</button></form>

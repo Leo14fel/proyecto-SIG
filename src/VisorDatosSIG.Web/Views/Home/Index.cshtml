@@ -5,8 +5,8 @@
 
 <section class="dashboard-header">
     <p class="eyebrow">VisorDatosSIG</p>
-    <h1>Catastro en diagnóstico</h1>
-    <p>Conteos consultados directamente desde las capas oficiales.</p>
+    <h1>Panel principal</h1>
+    <p>Conteos consultados directamente desde SQL Server.</p>
     <a class="btn btn-primary btn-lg" asp-controller="Visor" asp-action="Index">ABRIR VISOR</a>
 </section>
 <section class="layer-cards">
@@ -19,4 +19,4 @@
     </article>
 }
 </section>
-<aside class="diagnostic-notice">Modo diagnóstico: las capas se leen temporalmente desde los SHP. La persistencia definitiva SQL Server se encuentra en integración.</aside>
+<aside class="diagnostic-notice">Las capas del visor y sus conteos se consultan desde SQL Server. La API de diagnóstico SHP solo está disponible en Development.</aside>

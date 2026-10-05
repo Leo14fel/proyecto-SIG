@@ -29,4 +29,11 @@ public sealed class SqlAuthenticationService(VisorDatosSigDbContext dbContext) :
         var actualHash = Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, expectedHash.Length);
         return CryptographicOperations.FixedTimeEquals(actualHash, expectedHash);
     }
+
+    public static (byte[] Salt, byte[] Hash, int Iterations) HashPassword(string password)
+    {
+        const int iterations = 100_000;
+        var salt = RandomNumberGenerator.GetBytes(32);
+        return (salt, Rfc2898DeriveBytes.Pbkdf2(password, salt, iterations, HashAlgorithmName.SHA256, 32), iterations);
+    }
 }

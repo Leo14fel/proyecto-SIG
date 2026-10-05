@@ -13,6 +13,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Configure ConnectionStrings:DefaultConnection mediante User Secrets o una variable de entorno.");
 builder.Services.AddDbContext<VisorDatosSigDbContext>(options => options.UseSqlServer(connectionString, sql => sql.UseNetTopologySuite()));
 builder.Services.AddScoped<IAuthenticationService, SqlAuthenticationService>();
+builder.Services.AddScoped<ISqlLayerService, SqlLayerService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
 {
     options.Cookie.Name = "VisorDatosSIG.Auth";

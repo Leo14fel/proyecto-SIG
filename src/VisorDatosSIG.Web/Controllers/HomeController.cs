@@ -1,26 +1,18 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Authorization;
-using VisorDatosSIG.Infrastructure.Shapefiles;
+using VisorDatosSIG.Infrastructure.Persistence;
 using VisorDatosSIG.Web.Models;
 
 namespace VisorDatosSIG.Web.Controllers;
 
 [Authorize]
-public class HomeController : Controller
+public class HomeController(ISqlLayerService layers) : Controller
 {
-    private readonly IShapefileDiagnosticService _diagnostics;
-
-    public HomeController(IShapefileDiagnosticService diagnostics)
+    public async Task<IActionResult> Index(CancellationToken cancellationToken)
     {
-        _diagnostics = diagnostics;
-    }
-
-    public IActionResult Index()
-    {
-        var layers = _diagnostics.GetOfficialLayers()
-            .Select(layer => new LayerCardViewModel(layer.Name, _diagnostics.GetDiagnosticsForLayer(layer.Key).RecordCount));
-        return View(layers);
+        var layerCards = await layers.GetLayersAsync(cancellationToken);
+        return View(layerCards.Select(layer => new LayerCardViewModel(layer.Name, layer.Count)));
     }
 
     public IActionResult Privacy()
