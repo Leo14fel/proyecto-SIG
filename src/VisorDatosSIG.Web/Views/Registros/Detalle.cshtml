@@ -10,6 +10,16 @@
     { <dt>@property.Key</dt><dd>@(property.Value ?? "—")</dd> }
     </dl>
     <div class="detail-actions">
+        @if (TempData["OperationMessage"] is string message)
+        {
+            <p class="w-100" role="status">@message</p>
+        }
+        @if (User.IsInRole("Administrador") && Model.LayerKey == "codigos-fijos" && Model.Properties.TryGetValue("Estado", out var state) && state is byte status && status == 1)
+        {
+            <form asp-controller="Operaciones" asp-action="PrepararCorte" asp-route-id="@Model.Id" method="post" data-confirm-action="¿Marcar esta conexión para corte?">
+                <button class="btn btn-outline-danger">Marcar para corte</button>
+            </form>
+        }
         <a class="btn btn-primary" href="/Visor?capa=@Uri.EscapeDataString(Model.LayerKey)&id=@Model.Id&volver=@Uri.EscapeDataString(Model.ReturnUrl)">Ver en visor</a>
         <a class="btn btn-outline-secondary" href="@Model.ReturnUrl">Volver a resultados</a>
     </div>

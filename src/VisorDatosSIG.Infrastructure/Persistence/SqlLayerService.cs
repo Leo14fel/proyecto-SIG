@@ -15,6 +15,7 @@ public interface ISqlLayerService
     Task<IReadOnlyList<SqlLayerInfo>> GetLayersAsync(CancellationToken cancellationToken = default);
     Task<IReadOnlyList<SqlLayerFeature>> GetFeaturesAsync(string layerKey, Envelope? bbox, int limit, CancellationToken cancellationToken = default);
     Task<SqlLayerFeature?> GetFeatureAsync(string layerKey, int id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<SqlLayerFeature>> GetConnectionsByStateAsync(Envelope? bbox, int limit, byte state, CancellationToken cancellationToken = default);
     Task<SqlSearchPage> SearchAsync(string layerKey, string query, int page, int pageSize, string? field = null, string? comparison = null, CancellationToken cancellationToken = default);
     Task<SqlSearchPage> BrowseAsync(string layerKey, string? query, int page, int pageSize, string? field = null, string? comparison = null, CancellationToken cancellationToken = default);
 }
@@ -65,6 +66,16 @@ public sealed class SqlLayerService(VisorDatosSigDbContext dbContext) : ISqlLaye
             "vias" => (await dbContext.Vias.AsNoTracking().Where(x => x.Geom != null && (bounds == null || x.Geom.Intersects(bounds))).OrderBy(x => x.IdVia).Take(limit).ToListAsync(cancellationToken)).Select(Map).ToList(),
             _ => []
         };
+    }
+
+    public async Task<IReadOnlyList<SqlLayerFeature>> GetConnectionsByStateAsync(Envelope? bbox, int limit, byte state, CancellationToken cancellationToken = default)
+    {
+        var bounds = bbox is null ? null : GeometryFactory.Default.ToGeometry(bbox);
+        if (bounds is not null) bounds.SRID = 4326;
+        var rows = await dbContext.CodigosFijos.AsNoTracking()
+            .Where(x => x.Estado == state && x.Geom != null && (bounds == null || x.Geom.Intersects(bounds)))
+            .OrderBy(x => x.IdCodigo).Take(Math.Clamp(limit, 1, 10000)).ToListAsync(cancellationToken);
+        return rows.Select(Map).ToList();
     }
 
     public async Task<SqlLayerFeature?> GetFeatureAsync(string layerKey, int id, CancellationToken cancellationToken = default) => layerKey.ToLowerInvariant() switch

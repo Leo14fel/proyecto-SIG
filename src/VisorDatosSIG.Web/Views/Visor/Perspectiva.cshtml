@@ -1,0 +1,30 @@
+@{ ViewData["Title"] = "Visualización en perspectiva"; }
+<link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" />
+<h1>Visualización en perspectiva</h1>
+<div class="d-flex flex-wrap gap-3 align-items-center mb-3">
+    <a asp-action="Index" class="btn btn-outline-primary">Volver al visor 2D</a>
+    <button id="map-pitch" type="button" class="btn btn-outline-primary" aria-pressed="true">Inclinación 3D</button>
+    <label>Estado de conexión
+        <select id="perspective-state" class="form-select">
+            <option value="">Todos</option>
+            @for (var i = 0; i < VisorDatosSIG.Domain.Entities.WaterOperations.States.Length; i++)
+            {
+                <option value="@(i + 1)">@VisorDatosSIG.Domain.Entities.WaterOperations.States[i]</option>
+            }
+        </select>
+    </label>
+    <a asp-controller="Registros" asp-action="Index" asp-route-capa="codigos-fijos">Buscar por código o cliente</a>
+</div>
+<fieldset class="d-flex flex-wrap gap-3 mb-2">
+    <legend class="h6">Capas visibles</legend>
+    <label><input type="checkbox" data-layer="manzanas" checked /> Manzanas</label>
+    <label><input type="checkbox" data-layer="lotes" checked /> Lotes desde zoom 16</label>
+    <label><input type="checkbox" data-layer="vias" checked /> Vías</label>
+    <label><input type="checkbox" data-layer="codigos-fijos" checked /> Conexiones</label>
+</fieldset>
+<p id="perspective-status" role="status"></p>
+<div id="perspective-map" class="operation-map" aria-label="Mapa con inclinación y rotación"></div>
+@section Scripts {
+    <script src="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.js"></script>
+    <script src="~/js/perspective.js" asp-append-version="true"></script>
+}

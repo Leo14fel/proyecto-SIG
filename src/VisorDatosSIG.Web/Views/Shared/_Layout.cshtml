@@ -35,6 +35,15 @@
     <aside id="app-sidebar" class="app-sidebar" aria-label="Navegación principal">
         <div class="sidebar-brand"><svg aria-hidden="true"><use href="#i-map" /></svg><span>VisorDatosSIG</span><button id="sidebar-collapse" type="button" class="sidebar-collapse" aria-label="Contraer navegación" title="Contraer navegación">‹</button></div>
         <nav class="sidebar-nav">
+            @if (User.IsInRole("Administrador"))
+            {
+                <a class="@(IsActive("Operaciones", "Asignaciones") ? "active" : "")" asp-controller="Operaciones" asp-action="Asignaciones" title="Asignaciones"><svg aria-hidden="true"><use href="#i-data" /></svg><span>Asignaciones</span></a>
+                <a class="@(IsActive("Operaciones", "Monitoreo") ? "active" : "")" asp-controller="Operaciones" asp-action="Monitoreo" title="Monitoreo"><svg aria-hidden="true"><use href="#i-map" /></svg><span>Monitoreo</span></a>
+            }
+            @if (User.IsInRole("Cortador") || User.IsInRole("Reconexion"))
+            {
+                <a class="@(IsActive("Operaciones", "Campo") ? "active" : "")" asp-controller="Operaciones" asp-action="Campo" title="Mis tareas"><svg aria-hidden="true"><use href="#i-grid" /></svg><span>Mis tareas</span></a>
+            }
             <a class="@(IsActive("Home", "Index") ? "active" : "")" asp-controller="Home" asp-action="Index" title="Panel principal"><svg aria-hidden="true"><use href="#i-grid" /></svg><span>Panel principal</span></a>
             <a class="@(IsActive("Visor") ? "active" : "")" asp-controller="Visor" asp-action="Index" title="Visor cartográfico"><svg aria-hidden="true"><use href="#i-map" /></svg><span>Visor cartográfico</span></a>
             <a class="@(IsActive("Registros") ? "active" : "")" asp-controller="Registros" asp-action="Index" title="Registros geográficos"><svg aria-hidden="true"><use href="#i-data" /></svg><span>Registros geográficos</span></a>
@@ -42,7 +51,7 @@
             <a class="@(IsActive("Home", "Ayuda") ? "active" : "")" asp-controller="Home" asp-action="Ayuda" title="Ayuda"><svg aria-hidden="true"><use href="#i-help" /></svg><span>Ayuda</span></a>
         </nav>
         <div class="sidebar-account">
-            <a asp-controller="CuentaPerfil" asp-action="MiPerfil" title="Mi perfil"><svg aria-hidden="true"><use href="#i-user" /></svg><span><b>@User.Identity?.Name</b><small>@(User.IsInRole("Administrador") ? "Administrador" : "Consultor")</small></span></a>
+            <a asp-controller="CuentaPerfil" asp-action="MiPerfil" title="Mi perfil"><svg aria-hidden="true"><use href="#i-user" /></svg><span><b>@User.Identity?.Name</b><small>@string.Join(", ", User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(claim => claim.Value))</small></span></a>
             <form asp-controller="Cuenta" asp-action="Logout" method="post"><button type="submit" title="Cerrar sesión"><svg aria-hidden="true"><use href="#i-log-out" /></svg><span>Cerrar sesión</span></button></form>
         </div>
     </aside>

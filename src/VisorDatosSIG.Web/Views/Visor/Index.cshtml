@@ -8,6 +8,17 @@
         <p class="eyebrow">Datos espaciales SQL Server</p>
         <h1>Visor cartográfico</h1>
         <p class="viewer-intro">Capas oficiales consultadas desde SQL Server.</p>
+        <a asp-action="Perspectiva" class="btn btn-outline-primary btn-sm">Vista 3D</a>
+        <label class="form-label d-block mt-2">Estado de conexión
+            <select id="connection-state" class="form-select form-select-sm">
+                <option value="">Todos</option>
+                @for (var i = 0; i < VisorDatosSIG.Domain.Entities.WaterOperations.States.Length; i++)
+                {
+                    <option value="@(i + 1)">@VisorDatosSIG.Domain.Entities.WaterOperations.States[i]</option>
+                }
+            </select>
+        </label>
+        <label class="form-check-label"><input type="checkbox" id="block-dimensions" class="form-check-input" /> Dimensiones de manzanas desde zoom 18</label>
         <form id="search-form" class="map-search" role="search">
             <h2>Buscar registros</h2>
             <label for="search-layer">Filtro de capa</label>
@@ -52,7 +63,11 @@
             <h2>Leyenda</h2>
             <p><i class="legend-swatch manzanas"></i>Manzanas</p>
             <p><i class="legend-swatch lotes"></i>Lotes</p>
-            <p><i class="legend-swatch codigos-fijos"></i>Códigos Fijos</p>
+            <p><span class="legend-swatch" style="background:#15803d"></span> Normal</p>
+            <p><span class="legend-swatch" style="background:#b45309"></span> Para corte</p>
+            <p><span class="legend-swatch" style="background:#b91c1c"></span> Cortado</p>
+            <p><span class="legend-swatch" style="background:#7e22ce"></span> Baja parcial</p>
+            <p><span class="legend-swatch" style="background:#334155"></span> Baja total</p>
             <p><i class="legend-swatch vias"></i>Vías</p>
         </div>
         <div id="selection" class="selection-panel" hidden></div>
@@ -83,6 +98,11 @@
         };
         const layers = {};
         const metadata = {};
+        const requests = {};
+        const colors = ['#15803d', '#b45309', '#b91c1c', '#7e22ce', '#334155'];
+        const connectionState = document.getElementById('connection-state');
+        const dimensions = L.layerGroup().addTo(map);
+        const dimensionsToggle = document.getElementById('block-dimensions');
         let selected;
         let searchHighlight;
         let searchAbort;
@@ -121,13 +141,15 @@
             message.classList.toggle('error', isError);
         }
 
-        function styleFor(key) {
-            return styles[key];
+        function styleFor(key, feature) {
+            return key === 'codigos-fijos'
+                ? { ...styles[key], fillColor: colors[Number(feature?.properties?.Estado) - 1] || '#334155' }
+                : styles[key];
         }
 
         function resetSelected() {
             if (selected) {
-                selected.layer.setStyle(styleFor(selected.key));
+                selected.layer.setStyle(styleFor(selected.key, selected.feature));
             }
         }
 
@@ -157,9 +179,8 @@
             zoom.className = 'btn btn-outline-primary btn-sm';
             zoom.textContent = 'Acercar';
             zoom.addEventListener('click', () => {
-                const bounds = layer.getBounds();
-                if (feature.geometry?.type === 'Point') map.flyTo(bounds.getCenter(), Math.max(map.getZoom(), 18));
-                else if (bounds.isValid()) map.fitBounds(bounds, { padding: [40, 40], maxZoom: 18 });
+                if (feature.geometry?.type === 'Point') map.flyTo(layer.getLatLng(), Math.max(map.getZoom(), 18));
+                else if (layer.getBounds().isValid()) map.fitBounds(layer.getBounds(), { padding: [40, 40], maxZoom: 18 });
             });
             const clear = document.createElement('button');
             clear.type = 'button';
@@ -171,7 +192,7 @@
             details.textContent = 'Ver detalle';
             details.href = `/Registros/${encodeURIComponent(key)}/${encodeURIComponent(feature.id)}?volver=${encodeURIComponent('/Visor')}`;
             const back = new URLSearchParams(location.search).get('volver');
-            if (back) {
+            if (back && /^\/Registros(?:\?|$)/i.test(back)) {
                 const returnButton = document.createElement('a');
                 returnButton.className = 'btn btn-primary btn-sm';
                 returnButton.textContent = 'Volver a resultados';
@@ -187,13 +208,14 @@
             resetSelected();
             selected?.layer.closePopup();
             selected = undefined;
+            if (searchHighlight) { searchHighlight.remove(); searchHighlight = undefined; }
             selection.hidden = true;
             highlightSearchResult('', '');
         }
 
         function showSelection(key, feature, layer) {
             resetSelected();
-            selected = { key, layer };
+            selected = { key, layer, feature };
             layer.setStyle({ color: '#111827', weight: 3, fillOpacity: 0.42 });
             highlightSearchResult(key, feature.id ?? feature.properties?.Id);
             selection.replaceChildren(selectionContent(key, feature, layer));
@@ -208,7 +230,7 @@
             const input = document.createElement('input');
             input.id = id;
             input.type = 'checkbox';
-            input.checked = item.key !== 'lotes';
+            input.checked = item.key !== 'lotes' && item.key !== 'codigos-fijos';
             const dot = document.createElement('span');
             dot.className = `dot ${item.key}`;
             const text = document.createElement('span');
@@ -225,21 +247,27 @@
         }
 
         function removeLayer(key) {
+            requests[key]?.abort();
+            delete requests[key];
             if (layers[key]) {
                 map.removeLayer(layers[key]);
                 delete layers[key];
             }
+            if (key === 'manzanas') drawDimensions();
         }
 
         async function loadLayer(key) {
-            if (layers[key]) return;
+            if (layers[key] || requests[key]) return;
+            const control = document.getElementById(`layer-${key}`);
+            if (!control?.checked) return;
             const minimumZoom = key === 'lotes' ? 16 : key === 'codigos-fijos' ? 15 : 0;
+            const state = document.getElementById(`state-${key}`);
             if (map.getZoom() < minimumZoom) {
-                document.getElementById(`layer-${key}`).checked = false;
-                setMessage(`Para cargar ${metadata[key]?.name || key}, acerque el mapa al nivel ${minimumZoom} o superior.`, true);
+                state.textContent = 'Zoom ' + minimumZoom + '+';
                 return;
             }
-            const state = document.getElementById(`state-${key}`);
+            const pending = new AbortController();
+            requests[key] = pending;
             state.textContent = 'Cargando';
             setMessage('');
             try {
@@ -248,24 +276,69 @@
                     const bounds = map.getBounds();
                     url += `?minX=${bounds.getWest()}&minY=${bounds.getSouth()}&maxX=${bounds.getEast()}&maxY=${bounds.getNorth()}`;
                 }
-                const response = await fetch(url);
+                if (key === 'codigos-fijos' && connectionState.value) url += '&estado=' + connectionState.value;
+                const response = await fetch(url, { signal: pending.signal, cache: 'no-store' });
                 const data = await response.json();
+                if (pending.signal.aborted) return;
                 if (!response.ok) throw new Error(data.message || data.detail || 'Error al cargar la capa.');
                 const group = L.geoJSON(data, {
                     style: () => styleFor(key),
-                    pointToLayer: (_, latlng) => L.circleMarker(latlng, styleFor(key)),
+                    pointToLayer: (feature, latlng) => L.circleMarker(latlng, styleFor(key, feature)),
                     onEachFeature: (feature, layer) => layer.on('click', () => showSelection(key, feature, layer))
                 }).addTo(map);
                 layers[key] = group;
+                if (key === 'manzanas') drawDimensions();
                 state.textContent = `${data.features.length.toLocaleString('es-BO')}`;
                 if (key === 'lotes' && data.features.length === data.metadata.maximumRecords) setMessage('Se muestran hasta 3.500 lotes dentro de la extensión actual. Desplácese o acerque el mapa para consultar otros.', false);
             } catch (error) {
+                if (error.name === 'AbortError') return;
                 document.getElementById(`layer-${key}`).checked = false;
                 setMessage(`${error.message} Vuelva a activar la capa para reintentar.`, true);
             } finally {
-                if (!layers[key]) state.textContent = '';
+                if (requests[key] === pending) {
+                    delete requests[key];
+                    if (!layers[key]) state.textContent = '';
+                }
             }
         }
+
+        function drawDimensions() {
+            dimensions.clearLayers();
+            if (!dimensionsToggle.checked || map.getZoom() < 18 || !layers.manzanas) return;
+            const bounds = map.getBounds();
+            layers.manzanas.eachLayer(layer => {
+                const shape = layer.feature.geometry;
+                const rings = shape.type === 'Polygon' ? [shape.coordinates[0]] : shape.type === 'MultiPolygon' ? shape.coordinates.map(p => p[0]) : [];
+                for (const ring of rings) for (let i = 1; i < ring.length; i++) {
+                    const a = L.latLng(ring[i - 1][1], ring[i - 1][0]);
+                    const b = L.latLng(ring[i][1], ring[i][0]);
+                    const middle = L.latLng((a.lat + b.lat) / 2, (a.lng + b.lng) / 2);
+                    const length = map.distance(a, b);
+                    if (length >= 3 && bounds.contains(middle))
+                        L.tooltip({ permanent: true, direction: 'center', className: 'block-dimension' })
+                            .setLatLng(middle).setContent(length.toFixed(1) + ' m').addTo(dimensions);
+                }
+            });
+        }
+
+        function refreshSpatialLayer(key) {
+            const control = document.getElementById(`layer-${key}`);
+            if (control?.checked) { removeLayer(key); loadLayer(key); }
+        }
+        connectionState.addEventListener('change', () => {
+            const control = document.getElementById('layer-codigos-fijos');
+            if (control) { control.checked = true; refreshSpatialLayer('codigos-fijos'); }
+        });
+        dimensionsToggle.addEventListener('change', drawDimensions);
+        let spatialTimer;
+        map.on('moveend', () => {
+            clearTimeout(spatialTimer);
+            spatialTimer = setTimeout(() => {
+                refreshSpatialLayer('lotes');
+                refreshSpatialLayer('codigos-fijos');
+                drawDimensions();
+            }, 180);
+        });
 
         fetch('/api/capas')
             .then(response => response.json())
@@ -379,20 +452,19 @@
             setMessage('Cargando registro seleccionado...');
             try {
                 const response = await fetch(`/api/capas/${encodeURIComponent(key)}/${encodeURIComponent(id)}`);
+                if (!response.ok) throw new Error(response.status === 404 ? 'El registro no existe o no tiene geometría.' : 'No fue posible cargar el registro.');
                 const feature = await response.json();
-                if (!response.ok) throw new Error(feature.message || 'No fue posible cargar el registro.');
                 if (!feature.geometry) throw new Error('El registro no tiene geometría para mostrar.');
                 if (!layers[key]) {
                     const toggle = document.getElementById(`layer-${key}`);
                     if (toggle) {
                         toggle.checked = true;
-                        loadLayer(key);
                     }
                 }
                 if (searchHighlight) map.removeLayer(searchHighlight);
                 searchHighlight = L.geoJSON(feature, {
                     style: () => styleFor(key),
-                    pointToLayer: (_, latlng) => L.circleMarker(latlng, styleFor(key)),
+                    pointToLayer: (item, latlng) => L.circleMarker(latlng, { ...styleFor(key, item), radius: 9 }),
                     onEachFeature: (item, layer) => layer.on('click', () => showSelection(key, item, layer))
                 }).addTo(map);
                 const layer = searchHighlight.getLayers()[0];

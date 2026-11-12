@@ -52,6 +52,7 @@ public sealed class RegistrosApiControllerTests
         public Task<IReadOnlyList<SqlLayerInfo>> GetLayersAsync(CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SqlLayerInfo>>([]);
         public Task<IReadOnlyList<SqlLayerFeature>> GetFeaturesAsync(string layerKey, Envelope? bbox, int limit, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SqlLayerFeature>>([]);
         public Task<SqlLayerFeature?> GetFeatureAsync(string layerKey, int id, CancellationToken cancellationToken = default) => Task.FromResult<SqlLayerFeature?>(null);
+        public Task<IReadOnlyList<SqlLayerFeature>> GetConnectionsByStateAsync(Envelope? bbox, int limit, byte state, CancellationToken cancellationToken = default) => Task.FromResult<IReadOnlyList<SqlLayerFeature>>([]);
         public Task<SqlSearchPage> SearchAsync(string layerKey, string query, int page, int pageSize, string? field = null, string? comparison = null, CancellationToken cancellationToken = default) => BrowseAsync(layerKey, query, page, pageSize, field, comparison, cancellationToken);
         public Task<SqlSearchPage> BrowseAsync(string layerKey, string? query, int page, int pageSize, string? field = null, string? comparison = null, CancellationToken cancellationToken = default)
         {

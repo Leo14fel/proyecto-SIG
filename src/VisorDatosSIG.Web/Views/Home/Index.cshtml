@@ -1,11 +1,29 @@
 ﻿@model IEnumerable<VisorDatosSIG.Web.Models.LayerCardViewModel>
 @{
     ViewData["Title"] = "Panel de capas";
+    var counts = (Dictionary<byte, int>)ViewBag.ConnectionCounts;
+    var total = counts.Values.Sum();
 }
 
 <section class="dashboard-header dashboard-hero">
     <div><p class="eyebrow">VisorDatosSIG</p><h1>Panel principal</h1><p>Información cartográfica oficial, consultada directamente desde SQL Server.</p></div>
     <div class="dashboard-actions"><a class="btn btn-primary" asp-controller="Visor" asp-action="Index">Abrir visor</a><a class="btn btn-outline-primary" asp-controller="Registros" asp-action="Index">Explorar registros</a></div>
+</section>
+<section class="detail-card mb-3" aria-labelledby="water-stats">
+    <h2 id="water-stats">Conexiones de agua</h2>
+    <p>Total <strong>@total.ToString("N0")</strong></p>
+    <div class="row g-2">
+    @for (var i = 0; i < VisorDatosSIG.Domain.Entities.WaterOperations.States.Length; i++)
+    {
+        var count = counts.GetValueOrDefault((byte)(i + 1));
+        var percentage = total == 0 ? 0 : (int)Math.Round(100d * count / total);
+        var state = VisorDatosSIG.Domain.Entities.WaterOperations.States[i];
+        <div class="col-6 col-md">
+            <strong>@count.ToString("N0")</strong><br />@state
+            <progress class="w-100" max="100" value="@percentage" aria-label="@state">@percentage%</progress>
+        </div>
+    }
+    </div>
 </section>
 <section class="layer-cards">
 @foreach (var layer in Model)

@@ -7,4 +7,5 @@ namespace VisorDatosSIG.Web.Controllers;
 public sealed class VisorController : Controller
 {
     public IActionResult Index() => View();
+    public IActionResult Perspectiva() => View();
 }

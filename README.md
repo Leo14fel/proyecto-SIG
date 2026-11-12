@@ -1,5 +1,7 @@
 # VisorDatosSIG
 
+La fase 2 incorpora la gestión de cortes y reconexiones. Consulta los [requisitos de usuario, preparación y prueba de aceptación](docs/FASE_2_OPERACIONES.md).
+
 ## Beta técnica
 
 Esta entrega presenta las cuatro capas oficiales desde SQL Server, un visor Leaflet autenticado, migración SHP a SQL y búsqueda segura.

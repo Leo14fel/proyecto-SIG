@@ -1,6 +1,8 @@
 html {
   font-size: 14px;
 }
+.operation-map { min-height: 340px; height: 57dvh; border: 1px solid #dbe3ed; border-radius: .55rem; }
+[data-operation] [hidden] { display: none !important; }
 
 @media (min-width: 768px) {
   html {

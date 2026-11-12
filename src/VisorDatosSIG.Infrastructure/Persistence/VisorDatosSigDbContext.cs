@@ -12,9 +12,20 @@ public sealed class VisorDatosSigDbContext(DbContextOptions<VisorDatosSigDbConte
     public DbSet<Usuario> Usuarios => Set<Usuario>();
     public DbSet<Rol> Roles => Set<Rol>();
     public DbSet<UsuarioRol> UsuariosRoles => Set<UsuarioRol>();
+    public DbSet<WaterAssignment> WaterAssignments => Set<WaterAssignment>();
+    public DbSet<WaterTask> WaterTasks => Set<WaterTask>();
+    public DbSet<WorkerPosition> WorkerPositions => Set<WorkerPosition>();
+    public DbSet<WaterEvidence> WaterEvidence => Set<WaterEvidence>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        modelBuilder.Entity<WaterTask>(entity =>
+        {
+            entity.Property(x => x.Version).IsRowVersion();
+            entity.HasOne(x => x.Code).WithMany().HasForeignKey(x => x.CodeId);
+            entity.HasMany(x => x.Evidence).WithOne().HasForeignKey(x => x.WaterTaskId);
+        });
+        modelBuilder.Entity<WaterAssignment>().HasMany(x => x.Tasks).WithOne(x => x.Assignment).HasForeignKey(x => x.AssignmentId);
         modelBuilder.Entity<Manzana>(entity => { entity.ToTable("Manzanas"); entity.HasKey(x => x.IdManzana); entity.Property(x => x.UvMza).HasColumnName("UV_MZA").HasMaxLength(20); entity.Property(x => x.Uv).HasColumnName("UV").HasMaxLength(15); entity.Property(x => x.Mza).HasColumnName("MZA").HasMaxLength(10); entity.Property(x => x.Geom).HasColumnType("geometry"); });
         modelBuilder.Entity<Lote>(entity => { entity.ToTable("Lotes"); entity.HasKey(x => x.IdLote); entity.Property(x => x.NroLote).HasMaxLength(15); entity.Property(x => x.Geom).HasColumnType("geometry"); });
         modelBuilder.Entity<CodigoFijo>(entity => { entity.ToTable("CodigosFijos"); entity.HasKey(x => x.IdCodigo); entity.Property(x => x.CodFSql).HasColumnName("CodF_SQL"); entity.Property(x => x.CodFSig).HasColumnName("CodF_SIG").HasMaxLength(25); entity.Property(x => x.CodFijoValor).HasColumnName("CodFijo"); entity.Property(x => x.Nombre).HasMaxLength(120); entity.Property(x => x.FechaCambioEstado).HasColumnType("datetime2"); entity.Property(x => x.Geom).HasColumnType("geometry"); });

@@ -1,4 +1,4 @@
-const STATIC_CACHE = 'visordatos-static-v1';
+const STATIC_CACHE = 'visordatos-static-v2';
 const OFFLINE_URL = '/offline.html';
 const STATIC_ASSETS = [
   OFFLINE_URL, '/css/site.css', '/js/site.js',
@@ -13,6 +13,7 @@ self.addEventListener('activate', event => {
   event.waitUntil(caches.keys().then(keys => Promise.all(keys.filter(key => key !== STATIC_CACHE).map(key => caches.delete(key)))).then(() => self.clients.claim()));
 });
 function isPrivatePath(pathname) {
+  if (/^\/(operaciones|registros)(\/|$)/i.test(pathname)) return true;
   return pathname === '/Cuenta' || pathname.startsWith('/Cuenta/') ||
     pathname === '/Administracion' || pathname.startsWith('/Administracion/') ||
     pathname === '/api' || pathname.startsWith('/api/') ||

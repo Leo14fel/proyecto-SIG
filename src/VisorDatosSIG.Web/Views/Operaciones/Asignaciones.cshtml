@@ -1,0 +1,23 @@
+@{ ViewData["Title"] = "Asignaciones"; }
+<partial name="_MapaOperativo" />
+<section data-operation="assign">
+    <h1>Asignaciones de agua</h1>
+    <p>Selecciona el trabajador y marca en el mapa el inicio de la ruta.</p>
+    @Html.AntiForgeryToken()
+    <form id="assignment-form" class="row g-2 mb-3">
+        <label class="col-md">Operación<select id="operation-kind" class="form-select"><option value="cut">Corte</option><option value="reconnect">Reconexión</option></select></label>
+        <label class="col-md">Trabajador<select id="operation-worker" class="form-select" required></select></label>
+        <label class="col-md-2">Cantidad<input id="operation-count" class="form-control" type="number" value="10" min="1" max="50" required /></label>
+        <div class="col-12 d-flex gap-2 flex-wrap">
+            <button class="btn btn-primary">Calcular ruta óptima</button>
+            <button type="button" id="save-assignment" class="btn btn-success" disabled>Guardar asignación</button>
+        </div>
+    </form>
+    <p id="operation-status" role="status"></p>
+    <div id="operation-map" class="operation-map" aria-label="Mapa de asignación"></div>
+    <ol id="operation-stops" class="mt-3"></ol>
+</section>
+@section Scripts {
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+    <script src="~/js/operations.js" asp-append-version="true"></script>
+}

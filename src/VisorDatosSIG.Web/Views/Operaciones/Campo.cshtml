@@ -1,0 +1,33 @@
+@{ ViewData["Title"] = "Mis tareas"; }
+<section data-operation="field" class="detail-card">
+    <h1>Mis tareas</h1>
+    <p>Las conexiones aparecen en el orden de la ruta asignada.</p>
+    @Html.AntiForgeryToken()
+    <p id="operation-status" role="status"></p>
+    <div id="field-assignments"></div>
+    <form id="field-report" class="mt-4" hidden>
+        <h2 id="field-destination"></h2>
+        <p id="field-location" role="status"></p>
+        <div class="d-flex flex-wrap gap-2 mb-3">
+            <button type="button" id="get-gps" class="btn btn-outline-primary">Obtener GPS</button>
+            <select id="travel-mode" class="form-select w-auto" aria-label="Modo de viaje">
+                <option value="two-wheeler">Moto</option><option value="walking">A pie</option><option value="driving">Vehículo</option>
+            </select>
+            <a id="field-navigate" class="btn btn-primary" target="_blank" rel="noopener noreferrer" hidden>Navegar</a>
+        </div>
+        <label class="form-label">Resultado<select name="Observed" class="form-select"><option value="false">Realizado</option><option value="true">Observado</option></select></label>
+        <div id="meter-details" class="row g-2">
+            <label class="col-sm">Número de medidor<input class="form-control" name="Meter" maxlength="50" /></label>
+            <label class="col-sm">Lectura actual<input class="form-control" name="Reading" inputmode="decimal" maxlength="32" /></label>
+        </div>
+        <label class="form-label d-block mt-2">Observación<textarea class="form-control" name="Observation" maxlength="500" placeholder="Ej. casa cerrada"></textarea></label>
+        <label class="form-label d-block">Fotos de evidencia (hasta 3)<input type="file" class="form-control" name="Photos" accept="image/jpeg,image/png" capture="environment" multiple /></label>
+        <button id="native-photo" type="button" class="btn btn-outline-primary mb-2" hidden>Tomar foto</button>
+        <button id="clear-photos" type="button" class="btn btn-outline-secondary mb-2" hidden>Quitar fotos</button>
+        <p id="photo-status" role="status"></p>
+        <button class="btn btn-success">Guardar resultado con GPS</button>
+    </form>
+</section>
+@section Scripts {
+    <script src="~/js/operations.js" asp-append-version="true"></script>
+}
