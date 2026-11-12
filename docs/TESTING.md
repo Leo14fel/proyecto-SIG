@@ -56,3 +56,11 @@ node --test tests/pwa-service-worker.test.cjs
 ```
 
 Los siete casos cubren exclusión de rutas privadas, funcionamiento sin conexión de CSS público, cabeceras de privacidad, navegación offline, limpieza de cachés antiguos, orígenes externos y aislamiento entre aplicaciones. Estas pruebas simulan el navegador; deben ejecutarse en el entorno del proyecto y no sustituyen la validación en Android/iOS. La cifra de 18/18 pruebas .NET registrada anteriormente no corresponde a esta nueva versión del código y requiere repetición.
+
+## PWA de campo: interfaz responsive (2026-11-12)
+
+La pantalla **Mis tareas** presenta cada asignación con un progreso de tareas registradas y tarjetas por parada (Pendiente, Realizado u Observado). Las acciones de recorrido y apertura de tareas se conservan. El formulario muestra los nombres de fotos elegidas y solicita confirmación antes de enviar el resultado; no cambia las validaciones del servidor, GPS, SQL ni Dijkstra.
+
+**Pruebas de aceptación pendientes en navegador y teléfono físico:** 320, 360, 390, 768 y 1366 px; nombres largos; varias asignaciones; tarjetas pendientes/realizadas/observadas; iniciar y detener seguimiento; abrir una tarea; cancelar confirmación sin guardar; guardar una observación y un trabajo realizado con fotos; revisar el resultado en SQL Server. El rediseño es una mejora visual, no una prueba integral ejecutada.
+
+La aplicación móvil oficial sigue siendo **PWA**, no APK ni MAUI.
