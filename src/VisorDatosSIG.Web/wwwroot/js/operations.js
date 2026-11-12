@@ -357,22 +357,46 @@
                 if (!data.length) holder.append(node('p', 'Todavía no tienes asignaciones.'));
                 if (tracking && !data.some(a => a.id === tracking && a.tasks.some(t => !t.completedUtc))) stopTracking();
                 data.forEach(a => {
-                    const group = node('section', '', 'mt-3');
-                    group.append(node('h2', label(a.reconnect) + ' #' + a.id, 'h5'));
-                    if (a.tasks.some(t => !t.completedUtc)) {
+                    const group = node('section', '', 'field-assignment');
+                    const total = a.tasks.length;
+                    const completed = a.tasks.filter(t => t.completedUtc).length;
+                    const pending = total - completed;
+                    const header = node('div', '', 'field-assignment-header');
+                    const title = node('h2', label(a.reconnect) + ' #' + a.id, 'h5 mb-1');
+                    const summary = node('p', completed + ' de ' + total + ' tareas registradas · ' + pending + ' pendientes', 'field-assignment-summary');
+                    const progress = document.createElement('progress');
+                    progress.className = 'field-assignment-progress';
+                    progress.max = Math.max(total, 1);
+                    progress.value = completed;
+                    progress.setAttribute('aria-label', 'Avance de ' + label(a.reconnect) + ' #' + a.id);
+                    header.append(title, summary, progress);
+                    group.append(header);
+                    if (pending) {
+                        const actions = node('div', '', 'field-assignment-actions');
                         const start = node('button', 'Iniciar recorrido', 'btn btn-outline-primary btn-sm');
-                        const end = node('button', 'Detener recorrido', 'btn btn-outline-secondary btn-sm ms-2');
+                        const end = node('button', 'Detener recorrido', 'btn btn-outline-secondary btn-sm');
+                        start.type = end.type = 'button';
                         start.onclick = () => startTracking(a.id);
                         end.onclick = () => { if (tracking === a.id) stopTracking('Recorrido detenido.'); };
-                        group.append(start, end);
+                        actions.append(start, end);
+                        group.append(actions);
                     }
-                    const list = node('ol', '', 'list-group list-group-numbered my-2');
+                    const list = node('ol', '', 'field-task-list');
                     a.tasks.forEach(t => {
-                        const row = node('li', '', 'list-group-item');
-                        const title = [t.codFijoValor, t.nombre].filter(Boolean).join(' · ') || '#' + t.id;
-                        if (t.completedUtc) row.append(' ' + title + (t.observed ? ' · Observado' : ' · Realizado'));
-                        else {
-                            const button = node('button', title, 'btn btn-link text-start');
+                        const row = node('li', '', 'field-task-card');
+                        const details = node('div', '', 'field-task-details');
+                        const line = node('div', '', 'field-task-topline');
+                        const sequence = node('span', 'Parada ' + t.sequence, 'field-task-sequence');
+                        const state = node('span', t.completedUtc ? (t.observed ? 'Observado' : 'Realizado') : 'Pendiente',
+                            'field-task-state ' + (t.completedUtc ? (t.observed ? 'is-observed' : 'is-done') : 'is-pending'));
+                        line.append(sequence, state);
+                        const name = node('strong', t.nombre || 'Conexión de agua', 'field-task-name');
+                        const code = node('span', 'Código fijo: ' + (t.codFijoValor ?? t.id), 'field-task-code');
+                        details.append(line, name, code);
+                        row.append(details);
+                        if (!t.completedUtc) {
+                            const button = node('button', 'Abrir tarea', 'btn btn-primary field-task-action');
+                            button.type = 'button';
                             button.onclick = () => select(t);
                             row.append(button);
                         }
