@@ -93,7 +93,7 @@ public sealed class SqlLayerService(VisorDatosSigDbContext dbContext) : ISqlLaye
     public async Task<SqlSearchPage> BrowseAsync(string layerKey, string? query, int page, int pageSize, string? field = null, string? comparison = null, CancellationToken cancellationToken = default)
     {
         ValidateKey(layerKey);
-        query = query?.Trim().ToLowerInvariant() ?? string.Empty;
+        query = query?.Trim() ?? string.Empty;
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 100);
         var skip = (page - 1) * pageSize;
@@ -101,35 +101,61 @@ public sealed class SqlLayerService(VisorDatosSigDbContext dbContext) : ISqlLaye
 
         return layerKey.ToLowerInvariant() switch
         {
-            "manzanas" => await SearchManzanasAsync(query, numericQuery, skip, pageSize, field, comparison, cancellationToken),
-            "lotes" => await SearchLotesAsync(query, numericQuery, skip, pageSize, field, comparison, cancellationToken),
+            "manzanas" => await SearchManzanasAsync(query, skip, pageSize, field, comparison, cancellationToken),
+            "lotes" => await SearchLotesAsync(query, skip, pageSize, field, comparison, cancellationToken),
             "codigos-fijos" => await SearchCodigosFijosAsync(query, numericQuery, skip, pageSize, field, comparison, cancellationToken),
-            "vias" => await SearchViasAsync(query, numericQuery, skip, pageSize, field, comparison, cancellationToken),
+            "vias" => await SearchViasAsync(query, skip, pageSize, field, comparison, cancellationToken),
             _ => throw new KeyNotFoundException($"La capa '{layerKey}' no existe.")
         };
     }
 
-    private async Task<SqlSearchPage> SearchManzanasAsync(string query, int? number, int skip, int take, string? field, string? comparison, CancellationToken token)
+    private const string SearchCollation = "Latin1_General_100_CI_AI";
+
+    private async Task<SqlSearchPage> SearchManzanasAsync(string query, int skip, int take, string? field, string? comparison, CancellationToken token)
     {
         var source = dbContext.Manzanas.AsNoTracking();
+        var parts = string.IsNullOrEmpty(field)
+            ? System.Text.RegularExpressions.Regex.Match(query, @"^UV\s+(\S+)(?:\s+(?:manzana|MZA)\s+(\S+))?$", System.Text.RegularExpressions.RegexOptions.IgnoreCase | System.Text.RegularExpressions.RegexOptions.CultureInvariant)
+            : System.Text.RegularExpressions.Match.Empty;
+        if (parts.Success)
+        {
+            var uv = parts.Groups[1].Value;
+            var manzana = parts.Groups[2].Value;
+            source = source.Where(x => EF.Functions.Collate(x.Uv!, SearchCollation) == uv
+                && (manzana == "" || EF.Functions.Collate(x.Mza!, SearchCollation) == manzana));
+            query = "";
+        }
+        if (string.IsNullOrEmpty(field) && query.StartsWith("manzana ", StringComparison.OrdinalIgnoreCase))
+        {
+            var reference = query["manzana ".Length..].Trim();
+            source = source.Where(x => EF.Functions.Collate(x.Mza!, SearchCollation) == reference
+                || EF.Functions.Collate(x.UvMza!, SearchCollation) == reference);
+            query = "";
+        }
         source = field switch
         {
-            null or "" => source.Where(x => x.UvMza != null && x.UvMza.ToLower().Contains(query) || x.Uv != null && x.Uv.ToLower().Contains(query) || x.Mza != null && x.Mza.ToLower().Contains(query) || number != null && (x.IdManzana == number || x.IdOrigen == number)),
-            "UV_MZA" => Filter(source, x => x.UvMza, query, comparison),
-            "UV" => Filter(source, x => x.Uv, query, comparison),
-            "MZA" => Filter(source, x => x.Mza, query, comparison),
+            null or "" when query.Length == 0 => source,
+            null or "" => source.Where(x => EF.Functions.Collate(x.UvMza!, SearchCollation).Contains(query)
+                || EF.Functions.Collate(x.Uv!, SearchCollation).Contains(query)
+                || EF.Functions.Collate(x.Mza!, SearchCollation).Contains(query)),
+            "UV_MZA" => Filter(source, x => EF.Functions.Collate(x.UvMza!, SearchCollation), query, comparison),
+            "UV" => Filter(source, x => EF.Functions.Collate(x.Uv!, SearchCollation), query, comparison),
+            "MZA" => Filter(source, x => EF.Functions.Collate(x.Mza!, SearchCollation), query, comparison),
             _ => throw new ArgumentException("El campo no está permitido para Manzanas.")
         };
         return new SqlSearchPage(await source.CountAsync(token), (await source.OrderBy(x => x.IdManzana).Skip(skip).Take(take).ToListAsync(token)).Select(x => new SqlSearchResult("manzanas", x.IdManzana, Map(x).Properties)).ToList());
     }
 
-    private async Task<SqlSearchPage> SearchLotesAsync(string query, int? number, int skip, int take, string? field, string? comparison, CancellationToken token)
+    private async Task<SqlSearchPage> SearchLotesAsync(string query, int skip, int take, string? field, string? comparison, CancellationToken token)
     {
         var source = dbContext.Lotes.AsNoTracking();
         source = field switch
         {
-            null or "" => source.Where(x => x.NroLote != null && x.NroLote.ToLower().Contains(query) || number != null && (x.IdLote == number || x.IdOrigen == number || x.IdManzana == number)),
-            "NroLote" => Filter(source, x => x.NroLote, query, comparison),
+            null or "" when query.Length == 0 => source,
+            null or "" when query.StartsWith("lote ", StringComparison.OrdinalIgnoreCase)
+                => Filter(source, x => EF.Functions.Collate(x.NroLote!, SearchCollation), query["lote ".Length..].Trim(), "igual"),
+            null or "" => source.Where(x => EF.Functions.Collate(x.NroLote!, SearchCollation).Contains(query)),
+            "NroLote" => Filter(source, x => EF.Functions.Collate(x.NroLote!, SearchCollation), query, comparison),
             _ => throw new ArgumentException("El campo no está permitido para Lotes.")
         };
         return new SqlSearchPage(await source.CountAsync(token), (await source.OrderBy(x => x.IdLote).Skip(skip).Take(take).ToListAsync(token)).Select(x => new SqlSearchResult("lotes", x.IdLote, Map(x).Properties)).ToList());
@@ -140,9 +166,11 @@ public sealed class SqlLayerService(VisorDatosSigDbContext dbContext) : ISqlLaye
         var source = dbContext.CodigosFijos.AsNoTracking();
         source = field switch
         {
-            null or "" => source.Where(x => x.CodFSig != null && x.CodFSig.ToLower().Contains(query) || x.Nombre != null && x.Nombre.ToLower().Contains(query) || number != null && (x.IdCodigo == number || x.CodFSql == number || x.CodFijoValor == number || x.Estado == number || x.IdLote == number)),
-            "CodF_SIG" => Filter(source, x => x.CodFSig, query, comparison),
-            "Nombre" => Filter(source, x => x.Nombre, query, comparison),
+            null or "" when query.Length == 0 => source,
+            null or "" => source.Where(x => EF.Functions.Collate(x.CodFSig!, SearchCollation).Contains(query)
+                || EF.Functions.Collate(x.Nombre!, SearchCollation).Contains(query) || number != null && x.CodFijoValor == number),
+            "CodF_SIG" => Filter(source, x => EF.Functions.Collate(x.CodFSig!, SearchCollation), query, comparison),
+            "Nombre" => Filter(source, x => EF.Functions.Collate(x.Nombre!, SearchCollation), query, comparison),
             "CodFijo" when number is not null && comparison is "igual" => source.Where(x => x.CodFijoValor == number),
             "CodFijo" => throw new ArgumentException("CodFijo requiere un valor numérico y el operador Igual."),
             _ => throw new ArgumentException("El campo no está permitido para Códigos Fijos.")
@@ -150,15 +178,17 @@ public sealed class SqlLayerService(VisorDatosSigDbContext dbContext) : ISqlLaye
         return new SqlSearchPage(await source.CountAsync(token), (await source.OrderBy(x => x.IdCodigo).Skip(skip).Take(take).ToListAsync(token)).Select(x => new SqlSearchResult("codigos-fijos", x.IdCodigo, Map(x).Properties)).ToList());
     }
 
-    private async Task<SqlSearchPage> SearchViasAsync(string query, int? number, int skip, int take, string? field, string? comparison, CancellationToken token)
+    private async Task<SqlSearchPage> SearchViasAsync(string query, int skip, int take, string? field, string? comparison, CancellationToken token)
     {
         var source = dbContext.Vias.AsNoTracking();
         source = field switch
         {
-            null or "" => source.Where(x => x.Nombre != null && x.Nombre.ToLower().Contains(query) || x.TipoVia != null && x.TipoVia.ToLower().Contains(query) || x.OsmId != null && x.OsmId.ToLower().Contains(query) || number != null && (x.IdVia == number || x.ObjectId == number)),
-            "Nombre" => Filter(source, x => x.Nombre, query, comparison),
-            "TipoVia" => Filter(source, x => x.TipoVia, query, comparison),
-            "OSMID" => Filter(source, x => x.OsmId, query, comparison),
+            null or "" when query.Length == 0 => source,
+            null or "" => source.Where(x => EF.Functions.Collate(x.Nombre!, SearchCollation).Contains(query)
+                || EF.Functions.Collate(x.TipoVia!, SearchCollation).Contains(query)),
+            "Nombre" => Filter(source, x => EF.Functions.Collate(x.Nombre!, SearchCollation), query, comparison),
+            "TipoVia" => Filter(source, x => EF.Functions.Collate(x.TipoVia!, SearchCollation), query, comparison),
+            "OSMID" => Filter(source, x => EF.Functions.Collate(x.OsmId!, SearchCollation), query, comparison),
             _ => throw new ArgumentException("El campo no está permitido para Vías.")
         };
         return new SqlSearchPage(await source.CountAsync(token), (await source.OrderBy(x => x.IdVia).Skip(skip).Take(take).ToListAsync(token)).Select(x => new SqlSearchResult("vias", x.IdVia, Map(x).Properties)).ToList());

@@ -1,13 +1,19 @@
 @model VisorDatosSIG.Web.Models.LoginViewModel
 @{ ViewData["Title"] = "Iniciar sesión"; Layout = "_LoginLayout"; }
-<section class="login-shell">
-  <div class="login-brand"><h1>VisorDatosSIG</h1><p>Consulta territorial basada en datos geográficos</p></div>
+<main class="login-shell">
+  <div class="login-brand">
+    <div class="login-identity"><span class="brand-mark"><partial name="_Icon" model='"map"' /></span><span>VisorDatosSIG</span></div>
+    <div class="login-message"><p class="eyebrow">Gestión territorial</p><h1>El territorio y las operaciones de agua, en un solo lugar.</h1><p>Consulta el catastro, planifica recorridos y registra las tareas de campo.</p></div>
+    <div class="login-map" aria-hidden="true"><i></i><i></i><i></i><span class="login-map-pin"><partial name="_Icon" model='"pin"' /></span></div>
+  </div>
   <form asp-action="Login" method="post" class="login-card">
+    <span class="module-icon"><partial name="_Icon" model='"lock"' /></span>
     <h2>Iniciar sesión</h2>
-    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+    <p class="login-intro">Ingresa con tu cuenta de VisorDatosSIG.</p>
+    <div asp-validation-summary="ModelOnly" class="form-errors" role="alert"></div>
     <input asp-for="ReturnUrl" type="hidden" />
-    <div class="mb-3"><label asp-for="Login" class="form-label"></label><input asp-for="Login" class="form-control" autocomplete="username" autofocus /><span asp-validation-for="Login" class="text-danger"></span></div>
-    <div class="mb-4"><label asp-for="Password" class="form-label"></label><input asp-for="Password" class="form-control" autocomplete="current-password" /><span asp-validation-for="Password" class="text-danger"></span></div>
-    <button class="btn btn-primary w-100" type="submit">INICIAR SESIÓN</button>
+    <div class="mb-3"><label asp-for="Login" class="form-label"></label><div class="login-input"><partial name="_Icon" model='"user"' /><input asp-for="Login" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" required /></div><span asp-validation-for="Login" class="text-danger"></span></div>
+    <div class="mb-4"><label asp-for="Password" class="form-label"></label><div class="login-input"><partial name="_Icon" model='"lock"' /><input asp-for="Password" class="form-control" autocomplete="current-password" required /><button class="password-toggle" type="button" data-password-toggle="Password" aria-controls="Password" aria-label="Mostrar contraseña" aria-pressed="false"><partial name="_Icon" model='"eye"' /></button></div><span asp-validation-for="Password" class="text-danger"></span></div>
+    <button class="btn btn-primary w-100 login-submit" type="submit">Iniciar sesión <partial name="_Icon" model='"arrow"' /></button>
   </form>
-</section>
+</main>

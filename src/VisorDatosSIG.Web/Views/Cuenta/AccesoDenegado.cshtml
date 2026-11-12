@@ -1,2 +1,5 @@
 @{ ViewData["Title"] = "Acceso denegado"; }
-<div class="alert alert-warning">No tiene permisos para acceder a este recurso.</div>
+<section class="detail-card">
+    <partial name="_ModuleHeading" model='("lock", "Acceso denegado", "Tu cuenta no tiene permiso para abrir esta sección.")' />
+    <a asp-controller="Home" asp-action="Index" class="btn btn-primary">Volver al inicio <partial name="_Icon" model='"arrow"' /></a>
+</section>

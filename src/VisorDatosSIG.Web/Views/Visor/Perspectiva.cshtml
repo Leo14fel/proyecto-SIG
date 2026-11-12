@@ -1,6 +1,6 @@
 @{ ViewData["Title"] = "Visualización en perspectiva"; }
 <link rel="stylesheet" href="https://unpkg.com/maplibre-gl@5.6.2/dist/maplibre-gl.css" />
-<h1>Visualización en perspectiva</h1>
+<partial name="_ModuleHeading" model='("cube", "Visualización en perspectiva", "Inclina el mapa y filtra las conexiones por estado.")' />
 <div class="d-flex flex-wrap gap-3 align-items-center mb-3">
     <a asp-action="Index" class="btn btn-outline-primary">Volver al visor 2D</a>
     <button id="map-pitch" type="button" class="btn btn-outline-primary" aria-pressed="true">Inclinación 3D</button>

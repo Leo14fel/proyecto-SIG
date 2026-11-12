@@ -1,0 +1,5 @@
+@model (string Icon, string Title, string Description)
+<header class="module-heading">
+    <span class="module-icon"><partial name="_Icon" model="Model.Icon" /></span>
+    <div><h1>@Model.Title</h1><p>@Model.Description</p></div>
+</header>

@@ -20,6 +20,42 @@ Fuentes: **INF 442 SIG 2026-10-15** (alcance escrito) y **AlcanceProyecto_2_2026
 
 Las capturas también muestran entradas de menú para lecturación y órdenes de trabajo. El objetivo escrito delimita esta fase a cortes y reconexiones, por lo que esas entradas quedan como alcance por confirmar.
 
+## Lista de tareas de la fase 2
+
+Las casillas marcadas indican que el código está implementado. La puesta en marcha y las pruebas de aceptación se controlan por separado.
+
+### Aplicación web
+
+- [x] Iniciar y cerrar sesión, mostrar el nombre de usuario y proteger el acceso por rol.
+- [x] Mostrar un tablero con el total y los estados Normal, Para corte, Cortado, Baja parcial y Baja total.
+- [x] Incluir panel, asignaciones, visor, monitoreo y registros geográficos en la navegación.
+- [x] Mostrar conexiones de colores por estado, manzanas, lotes, vías, dimensiones de manzanas y OpenStreetMap.
+- [x] Ofrecer vistas 2D y 3D, filtro por estado y búsqueda por nombre de cliente o código fijo.
+- [x] Mejorar la consulta catastral con nombres de vía, referencias de manzana y UV y números de lote.
+- [x] Elegir un cortador o reconector, cantidad y origen. Calcular con Dijkstra sobre las vías, numerar las paradas y guardar la asignación.
+- [x] Mostrar posiciones del trabajador durante el recorrido, filtros y reproducción.
+- [x] Gestionar roles operativos y marcar conexiones para corte.
+
+### Aplicación Android
+
+- [x] Acceder con usuario y contraseña del cortador o reconector y mostrar sus tareas en el orden calculado.
+- [x] Obtener GPS, mostrar ubicación actual, destino y distancia. Abrir navegación externa en moto, a pie o vehículo según cobertura.
+- [x] Capturar fotos, número de medidor y lectura. Permitir una observación cuando no se pudo realizar el trabajo.
+- [x] Registrar fecha, hora y posición al guardar, incluso para «casa cerrada». Validar precisión y distancia al punto.
+- [x] Enviar ubicaciones de campo al monitoreo durante el recorrido.
+- [ ] OCR para leer el medidor desde la foto. Opcional.
+
+### Puesta en marcha, pruebas y entrega
+
+- [ ] Aplicar la extensión SQL en una base autorizada. Confirmar tablas y roles operativos.
+- [ ] Habilitar una cuenta de reconexión y elegir una conexión autorizada para la prueba.
+- [ ] Con una sesión real, verificar tablero, capas, dimensiones, vistas 2D y 3D, búsquedas, filtros, selección por mapa y permisos.
+- [ ] Ejecutar con un Android físico el ciclo Para corte → Cortado → Normal y comprobar la actualización del tablero.
+- [ ] Comprobar una observación con GPS, el rechazo sin GPS válido, la evidencia y el monitoreo mientras se navega.
+- [ ] Verificar que otro trabajador no puede consultar ni modificar la asignación.
+- [ ] Publicar las mejoras locales de interfaz y búsqueda cuando estén revisadas.
+- [ ] Preparar el enlace de entrega con documentación, proyecto completo, APK y copia autorizada de la base.
+
 ## Preparación
 
 1. Con autorización para cambios de esquema, aplicar `database/extensions/10_OperacionesAgua.sql` a la base existente. El script agrega tablas de operaciones y registra los roles oficiales ausentes. La aplicación no ejecuta el script al iniciar.

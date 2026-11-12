@@ -38,6 +38,20 @@ public sealed class OperacionesController(VisorDatosSigDbContext db, IDataProtec
     [HttpGet("Campo")]
     public IActionResult Campo() => View();
 
+    [HttpGet("Preparacion")]
+    public async Task<IActionResult> Preparacion(CancellationToken ct) => Json(new { ready = await SchemaReadyAsync(ct) });
+
+    private async Task<bool> SchemaReadyAsync(CancellationToken ct)
+    {
+        var ready = await db.Database.SqlQueryRaw<int>("""
+            SELECT CASE WHEN OBJECT_ID(N'dbo.WaterAssignments', N'U') IS NOT NULL
+                AND OBJECT_ID(N'dbo.WaterTasks', N'U') IS NOT NULL
+                AND OBJECT_ID(N'dbo.WorkerPositions', N'U') IS NOT NULL
+                AND OBJECT_ID(N'dbo.WaterEvidence', N'U') IS NOT NULL THEN 1 ELSE 0 END AS [Value]
+            """).SingleAsync(ct);
+        return ready == 1;
+    }
+
     private IQueryable<Usuario> Staff(string role) =>
         from user in db.Usuarios.AsNoTracking()
         where user.Activo && (from membership in db.UsuariosRoles
@@ -56,6 +70,11 @@ public sealed class OperacionesController(VisorDatosSigDbContext db, IDataProtec
     [HttpPost("PrepararCorte/{id:int}")]
     public async Task<IActionResult> PrepararCorte(int id, CancellationToken ct)
     {
+        if (!await SchemaReadyAsync(ct))
+        {
+            TempData["OperationMessage"] = "El administrador debe instalar la extensión SQL de operaciones antes de marcar conexiones.";
+            return RedirectToAction("Detalle", "Registros", new { capa = "codigos-fijos", id });
+        }
         var changed = await db.CodigosFijos.Where(c => c.IdCodigo == id && c.Estado == 1
                 && !db.WaterTasks.Any(t => t.CodeId == id && t.CompletedUtc == null))
             .ExecuteUpdateAsync(set => set.SetProperty(c => c.Estado, (byte)2)

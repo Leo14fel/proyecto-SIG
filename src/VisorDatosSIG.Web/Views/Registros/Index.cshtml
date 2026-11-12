@@ -1,29 +1,26 @@
 @{ ViewData["Title"] = "Registros geográficos"; }
-<section class="page-heading">
-    <p class="eyebrow">Información oficial</p>
-    <h1>Registros geográficos</h1>
-    <p>Consulta individual y paginada de la información almacenada en SQL Server.</p>
-</section>
+<partial name="_ModuleHeading" model='("data", "Registros geográficos", "Busca registros por capa y abre su ficha o ubicación exacta en el mapa.")' />
 
-<section class="records-card" aria-labelledby="records-title">
+<section class="records-card" aria-label="Consulta de registros">
     <div class="records-toolbar">
         <div class="record-tabs" role="tablist" aria-label="Capas geográficas">
             <button type="button" class="record-tab active" data-layer="todas" role="tab" aria-selected="true">Todas</button>
             <button type="button" class="record-tab" data-layer="manzanas" role="tab" aria-selected="false">Manzanas</button>
             <button type="button" class="record-tab" data-layer="lotes" role="tab" aria-selected="false">Lotes</button>
-            <button type="button" class="record-tab" data-layer="codigos-fijos" role="tab" aria-selected="false">Códigos Fijos</button>
+            <button type="button" class="record-tab" data-layer="codigos-fijos" role="tab" aria-selected="false">Conexiones de agua</button>
             <button type="button" class="record-tab" data-layer="vias" role="tab" aria-selected="false">Vías</button>
         </div>
         <form id="records-form" class="records-filter" role="search">
             <label class="visually-hidden" for="records-query">Buscar registros</label>
-            <input id="records-query" class="form-control" maxlength="100" placeholder="Buscar por atributos oficiales" />
-            <select id="records-field" class="form-select" aria-label="Campo de búsqueda"></select>
+            <input id="records-query" type="search" class="form-control" maxlength="100" aria-describedby="records-hint" />
+            <select id="records-field" class="form-select" aria-label="Buscar por"></select>
             <select id="records-comparison" class="form-select" aria-label="Comparación">
                 <option value="contiene">Contiene</option><option value="igual">Igual</option><option value="comienza-con">Comienza con</option>
             </select>
-            <button class="btn btn-primary" type="submit">Buscar</button>
+            <button class="btn btn-primary" type="submit"><partial name="_Icon" model='"search"' /> Buscar</button>
             <button id="records-clear" class="btn btn-outline-secondary" type="button">Limpiar</button>
         </form>
+        <p id="records-hint" class="form-text mb-0"></p>
     </div>
     <p id="records-status" class="records-status" role="status">Cargando registros…</p>
     <div id="records-results" class="records-results"></div>
@@ -31,16 +28,14 @@
 </section>
 
 @section Scripts {
+<script src="~/js/geographic-search.js" asp-append-version="true"></script>
 <script>
 (() => {
-    const fields = {
-        todas: [], manzanas: ['UV_MZA', 'UV', 'MZA'], lotes: ['NroLote'],
-        'codigos-fijos': ['CodF_SIG', 'CodFijo', 'Nombre'], vias: ['Nombre', 'TipoVia', 'OSMID']
-    };
-    const names = { todas: 'Todas las capas', manzanas: 'Manzanas', lotes: 'Lotes', 'codigos-fijos': 'Códigos Fijos', vias: 'Vías' };
+    const geographic = window.geographicSearch;
     const query = new URLSearchParams(location.search);
-    let layer = Object.hasOwn(fields, query.get('capa')) ? query.get('capa') : 'todas';
-    let page = Math.max(1, Number(query.get('pagina')) || 1);
+    let layer = Object.hasOwn(geographic.layers, query.get('capa')) ? query.get('capa') : 'todas';
+    const requestedPage = Number(query.get('pagina'));
+    let page = Number.isSafeInteger(requestedPage) && requestedPage >= 1 && requestedPage <= 2147483647 ? requestedPage : 1;
     let controller;
     const form = document.getElementById('records-form');
     const term = document.getElementById('records-query');
@@ -49,14 +44,16 @@
     const status = document.getElementById('records-status');
     const results = document.getElementById('records-results');
     const pagination = document.getElementById('records-pagination');
+    const hint = document.getElementById('records-hint');
     term.value = query.get('q') || '';
 
+    function updateFilter() {
+        geographic.updateOperator(field, comparison);
+        hint.textContent = field.value ? 'Escribe solo el valor del campo seleccionado.' : geographic.layers[layer].hint;
+    }
     function populateFields() {
-        field.replaceChildren();
-        const any = new Option('Todos los campos', ''); field.add(any);
-        fields[layer].forEach(name => field.add(new Option(name, name)));
-        field.value = fields[layer].includes(query.get('campo')) ? query.get('campo') : '';
-        comparison.disabled = !field.value;
+        geographic.setup(layer, term, field, comparison, query.get('campo'), query.get('operador'));
+        updateFilter();
     }
     function navigationUrl(item) {
         const itemLayer = item.layerKey || layer;
@@ -65,13 +62,14 @@
     }
     function escapeText(value) { const node = document.createElement('span'); node.textContent = value ?? '—'; return node.innerHTML; }
     function render(data) {
-        status.textContent = data.total ? `${data.total.toLocaleString('es-BO')} ${names[layer].toLowerCase()} · página ${data.pagina} de ${Math.max(1, Math.ceil(data.total / data.tamanoPagina))}` : 'No se encontraron registros.';
+        status.textContent = data.total ? `${data.total.toLocaleString('es-BO')} resultados · página ${data.pagina} de ${Math.max(1, Math.ceil(data.total / data.tamanoPagina))}` : 'No se encontraron registros. Prueba con parte del nombre o cambia la capa.';
         results.replaceChildren(); pagination.replaceChildren();
         data.items.forEach(item => {
             const urls = navigationUrl(item);
-            const attributes = Object.entries(item.properties || {}).filter(([key]) => !key.startsWith('Id') || key === Object.keys(item.properties)[0]).slice(0, 4);
+            const description = geographic.describe(item.layerKey || layer, item.properties);
             const row = document.createElement('article'); row.className = 'record-item';
-            row.innerHTML = `<div><span class="record-layer">${escapeText(names[item.layerKey || layer])}</span><h2>${escapeText(Object.values(item.properties || {}).find(value => value) ?? `Registro ${item.id}`)}</h2><p>${attributes.map(([key, value]) => `${escapeText(key)}: ${escapeText(value)}`).join(' · ')}</p></div><div class="record-actions"><a class="btn btn-outline-primary btn-sm" href="${urls.detail}">Ver detalle</a><a class="btn btn-primary btn-sm" href="${urls.viewer}">Ver en visor</a></div>`;
+            const details = description.details.map(([label, value]) => `${escapeText(label)}: ${escapeText(value)}`).join(' · ');
+            row.innerHTML = `<div><span class="record-layer">${escapeText(description.layer)}</span><h2>${escapeText(description.title)}</h2>${details ? `<p>${details}</p>` : ''}</div><div class="record-actions"><a class="btn btn-outline-primary btn-sm" href="${urls.detail}">Ver detalle</a><a class="btn btn-primary btn-sm" href="${urls.viewer}">Ver en visor</a></div>`;
             results.append(row);
         });
         if (data.total > data.tamanoPagina) {
@@ -89,11 +87,39 @@
         try { const response = await fetch(`/api/registros?${params}`, { signal: controller.signal }); const data = await response.json(); if (!response.ok) throw new Error(data.message || 'No fue posible consultar los registros.'); render(data); }
         catch (error) { if (error.name !== 'AbortError') status.textContent = error.message; }
     }
-    document.querySelectorAll('.record-tab').forEach(tab => tab.addEventListener('click', () => { layer = tab.dataset.layer; page = 1; query.delete('campo'); document.querySelectorAll('.record-tab').forEach(item => { const active = item === tab; item.classList.toggle('active', active); item.setAttribute('aria-selected', String(active)); }); populateFields(); load(); }));
+    const tabs = [...document.querySelectorAll('.record-tab')];
+    function selectTab(tab) {
+        tabs.forEach(item => {
+            const active = item === tab;
+            item.classList.toggle('active', active);
+            item.setAttribute('aria-selected', String(active));
+            item.tabIndex = active ? 0 : -1;
+        });
+    }
+    tabs.forEach((tab, index) => {
+        tab.addEventListener('click', () => {
+            layer = tab.dataset.layer;
+            query.delete('campo');
+            query.delete('operador');
+            selectTab(tab);
+            populateFields();
+            load();
+        });
+        tab.addEventListener('keydown', event => {
+            const offset = event.key === 'ArrowRight' ? 1 : event.key === 'ArrowLeft' ? -1 : 0;
+            if (!offset) return;
+            event.preventDefault();
+            const next = tabs[(index + offset + tabs.length) % tabs.length];
+            next.focus();
+            next.click();
+        });
+    });
     form.addEventListener('submit', event => { event.preventDefault(); load(1); });
-    field.addEventListener('change', () => comparison.disabled = !field.value);
-    document.getElementById('records-clear').addEventListener('click', () => { term.value = ''; field.value = ''; comparison.disabled = true; load(1); });
-    const selectedTab = document.querySelector(`.record-tab[data-layer="${layer}"]`); selectedTab.click();
+    field.addEventListener('change', updateFilter);
+    document.getElementById('records-clear').addEventListener('click', () => { term.value = ''; field.value = ''; updateFilter(); load(1); });
+    selectTab(tabs.find(tab => tab.dataset.layer === layer));
+    populateFields();
+    load(page);
 })();
 </script>
 }

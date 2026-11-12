@@ -9,7 +9,7 @@ namespace VisorDatosSIG.Web.Controllers;
 [Route("api/registros")]
 public sealed class RegistrosApiController(ISqlLayerService layers) : ControllerBase
 {
-    private static readonly HashSet<string> LayerKeys = ["manzanas", "lotes", "codigos-fijos", "vias"];
+    private static readonly string[] LayerKeys = ["manzanas", "lotes", "codigos-fijos", "vias"];
 
     [HttpGet]
     public async Task<IActionResult> Browse([FromQuery] string? capa, [FromQuery] string? q, [FromQuery] string? campo, [FromQuery] string? operador, [FromQuery] int pagina = 1, [FromQuery] int tamanoPagina = 25, CancellationToken cancellationToken = default)
@@ -23,12 +23,31 @@ public sealed class RegistrosApiController(ISqlLayerService layers) : Controller
         try
         {
             var pageSize = Math.Clamp(tamanoPagina, 1, 100);
+            if ((long)(pagina - 1) * pageSize > int.MaxValue) return BadRequest(new { message = "La página solicitada es demasiado grande." });
             if (capa.Equals("todas", StringComparison.OrdinalIgnoreCase))
             {
-                var perLayer = Math.Max(1, pageSize / LayerKeys.Count);
-                var pages = new List<SqlSearchPage>();
-                foreach (var key in LayerKeys) pages.Add(await layers.BrowseAsync(key, q, pagina, perLayer, cancellationToken: cancellationToken));
-                return Ok(new { capa, q = q?.Trim() ?? string.Empty, campo, operador, pagina, tamanoPagina = pageSize, total = pages.Sum(result => result.Total), items = pages.SelectMany(result => result.Items) });
+                var offset = (long)(pagina - 1) * pageSize;
+                var total = 0;
+                var items = new List<SqlSearchResult>(pageSize);
+                foreach (var key in LayerKeys)
+                {
+                    var first = await layers.BrowseAsync(key, q, 1, pageSize, cancellationToken: cancellationToken);
+                    total += first.Total;
+                    if (offset >= first.Total) { offset -= first.Total; continue; }
+                    if (items.Count == pageSize) continue;
+
+                    var localPage = (int)(offset / pageSize) + 1;
+                    var skip = (int)(offset % pageSize);
+                    var current = localPage == 1 ? first : await layers.BrowseAsync(key, q, localPage, pageSize, cancellationToken: cancellationToken);
+                    items.AddRange(current.Items.Skip(skip).Take(pageSize - items.Count));
+                    if (skip > 0 && items.Count < pageSize && (long)localPage * pageSize < first.Total)
+                    {
+                        var following = await layers.BrowseAsync(key, q, localPage + 1, pageSize, cancellationToken: cancellationToken);
+                        items.AddRange(following.Items.Take(pageSize - items.Count));
+                    }
+                    offset = 0;
+                }
+                return Ok(new { capa, q = q?.Trim() ?? string.Empty, campo, operador, pagina, tamanoPagina = pageSize, total, items });
             }
             var result = await layers.BrowseAsync(capa, q, pagina, pageSize, campo, operador, cancellationToken);
             return Ok(new { capa, q = q?.Trim() ?? string.Empty, campo, operador, pagina, tamanoPagina = pageSize, total = result.Total, items = result.Items });

@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using NetTopologySuite.Geometries;
+using System.Text.Json;
 using VisorDatosSIG.Infrastructure.Persistence;
 using VisorDatosSIG.Web.Controllers;
 
@@ -37,6 +38,21 @@ public sealed class RegistrosApiControllerTests
     }
 
     [Fact]
+    public async Task Browse_all_layers_fills_pages_across_layer_boundaries()
+    {
+        var service = new FakeLayers(new Dictionary<string, int> { ["manzanas"] = 3, ["lotes"] = 7, ["codigos-fijos"] = 1, ["vias"] = 0 });
+        var controller = new RegistrosApiController(service);
+        var result = Assert.IsType<OkObjectResult>(await controller.Browse("todas", null, null, null, 2, 5));
+        var json = JsonSerializer.SerializeToElement(result.Value);
+        Assert.Equal(11, json.GetProperty("total").GetInt32());
+        Assert.Equal([3, 4, 5, 6, 7], json.GetProperty("items").EnumerateArray().Select(item => item.GetProperty("Id").GetInt32()));
+
+        var lastPage = Assert.IsType<OkObjectResult>(await controller.Browse("todas", null, null, null, 3, 5));
+        var remaining = JsonSerializer.SerializeToElement(lastPage.Value).GetProperty("items").EnumerateArray();
+        Assert.Equal("codigos-fijos", Assert.Single(remaining).GetProperty("LayerKey").GetString());
+    }
+
+    [Fact]
     public async Task Get_returns_not_found_for_missing_official_record()
     {
         var result = await new RegistrosApiController(new FakeLayers()).Get("lotes", 999999, CancellationToken.None);
@@ -44,7 +60,7 @@ public sealed class RegistrosApiControllerTests
         Assert.IsType<NotFoundObjectResult>(result);
     }
 
-    private sealed class FakeLayers : ISqlLayerService
+    private sealed class FakeLayers(IReadOnlyDictionary<string, int>? counts = null) : ISqlLayerService
     {
         public int BrowseCalls { get; private set; }
         public (string, string?, int, int, string?, string?) LastBrowse { get; private set; }
@@ -58,8 +74,10 @@ public sealed class RegistrosApiControllerTests
         {
             BrowseCalls++;
             LastBrowse = (layerKey, query, page, pageSize, field, comparison);
-            IReadOnlyList<SqlSearchResult> items = [new(layerKey, 1, new Dictionary<string, object?> { ["Id"] = 1 })];
-            return Task.FromResult(new SqlSearchPage(1, items));
+            var count = counts?.GetValueOrDefault(layerKey) ?? 1;
+            var items = Enumerable.Range(1, count).Skip((page - 1) * pageSize).Take(pageSize)
+                .Select(id => new SqlSearchResult(layerKey, id, new Dictionary<string, object?> { ["Id"] = id })).ToList();
+            return Task.FromResult(new SqlSearchPage(count, items));
         }
     }
 }

@@ -3,12 +3,10 @@
 <nav class="breadcrumb" aria-label="Miga de pan"><a href="@Model.ReturnUrl">Registros geográficos</a><span aria-hidden="true">/</span><span>@Model.LayerName</span></nav>
 <section class="detail-card">
     <p class="eyebrow">@Model.LayerName</p>
-    <h1>Registro #@Model.Id</h1>
+    <h1 id="record-title">Ficha geográfica</h1>
     <p>Información oficial almacenada en SQL Server.</p>
-    <dl class="record-detail-list">
-    @foreach (var property in Model.Properties)
-    { <dt>@property.Key</dt><dd>@(property.Value ?? "—")</dd> }
-    </dl>
+    <dl id="record-attributes" class="record-detail-list" hidden></dl>
+    <script id="record-presentation" type="application/json">@Json.Serialize(new { layer = Model.LayerKey, properties = Model.Properties })</script>
     <div class="detail-actions">
         @if (TempData["OperationMessage"] is string message)
         {
@@ -24,3 +22,20 @@
         <a class="btn btn-outline-secondary" href="@Model.ReturnUrl">Volver a resultados</a>
     </div>
 </section>
+@section Scripts {
+    <script src="~/js/geographic-search.js" asp-append-version="true"></script>
+    <script>
+        const record = JSON.parse(document.getElementById('record-presentation').textContent);
+        const presentation = window.geographicSearch.describe(record.layer, record.properties);
+        document.getElementById('record-title').textContent = presentation.title;
+        const attributes = document.getElementById('record-attributes');
+        for (const [name, value] of presentation.details) {
+            const label = document.createElement('dt');
+            const description = document.createElement('dd');
+            label.textContent = name;
+            description.textContent = value;
+            attributes.append(label, description);
+        }
+        attributes.hidden = !presentation.details.length;
+    </script>
+}

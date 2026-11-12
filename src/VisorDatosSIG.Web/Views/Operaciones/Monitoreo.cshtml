@@ -1,18 +1,17 @@
 @{ ViewData["Title"] = "Monitoreo"; }
 <partial name="_MapaOperativo" />
 <section data-operation="monitor">
-    <h1>Monitoreo de personal</h1>
-    <p>Recorridos y últimas posiciones recibidas de los trabajadores.</p>
-    <form id="monitor-filter" class="row g-2 mb-3">
+    <partial name="_ModuleHeading" model='("pulse", "Monitoreo de personal", "Compara la ruta asignada con las ubicaciones que llegan desde el teléfono.")' />
+    <form id="monitor-filter" class="row g-3 mb-3 operation-controls">
         <label class="col-md">Fecha en Bolivia<input id="monitor-day" type="date" class="form-control" value="@DateTime.UtcNow.AddHours(-4).ToString("yyyy-MM-dd")" /></label>
         <label class="col-md">Operación<select id="monitor-kind" class="form-select"><option value="">Todas</option><option value="false">Corte</option><option value="true">Reconexión</option></select></label>
         <label class="col-md">Trabajador<select id="monitor-worker" class="form-select"><option value="">Todos</option></select></label>
         <div class="col-12 d-flex gap-2">
-            <button class="btn btn-primary">Actualizar</button>
-            <button id="monitor-play" type="button" class="btn btn-outline-primary">Reproducir recorrido</button>
+            <button class="btn btn-primary"><partial name="_Icon" model='"refresh"' /> Actualizar</button>
+            <button id="monitor-play" type="button" class="btn btn-outline-primary"><partial name="_Icon" model='"play"' /> <span>Reproducir recorrido</span></button>
         </div>
     </form>
-    <p id="operation-status" role="status"></p>
+    <p id="operation-status" class="operation-feedback" role="status"></p>
     <div id="operation-map" class="operation-map" aria-label="Mapa de monitoreo"></div>
     <div id="operation-stops" class="mt-3"></div>
 </section>

@@ -5,10 +5,11 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
 <section class="viewer-shell">
     <aside class="viewer-panel">
-        <p class="eyebrow">Datos espaciales SQL Server</p>
-        <h1>Visor cartográfico</h1>
-        <p class="viewer-intro">Capas oficiales consultadas desde SQL Server.</p>
-        <a asp-action="Perspectiva" class="btn btn-outline-primary btn-sm">Vista 3D</a>
+        <h1><partial name="_Icon" model='"map"' /> Visor cartográfico</h1>
+        <p class="viewer-intro">Explora el catastro y el estado de las conexiones.</p>
+        <a asp-action="Perspectiva" class="btn btn-outline-primary btn-sm"><partial name="_Icon" model='"cube"' /> Vista 3D</a>
+        <details id="viewer-tools" class="viewer-tools mt-3" open>
+        <summary><partial name="_Icon" model='"layers"' /> Capas y búsqueda</summary>
         <label class="form-label d-block mt-2">Estado de conexión
             <select id="connection-state" class="form-select form-select-sm">
                 <option value="">Todos</option>
@@ -24,13 +25,13 @@
             <label for="search-layer">Filtro de capa</label>
             <select id="search-layer" class="form-select form-select-sm" name="capa">
                 <option value="todas" selected>Todas</option>
-                <option value="codigos-fijos">Códigos Fijos</option>
+                <option value="codigos-fijos">Conexiones de agua</option>
                 <option value="manzanas">Manzanas</option>
                 <option value="lotes">Lotes</option>
                 <option value="vias">Vías</option>
             </select>
             <div id="advanced-filters" hidden>
-                <label for="search-field">Campo</label>
+                <label for="search-field">Buscar por</label>
                 <select id="search-field" class="form-select form-select-sm" name="campo"></select>
                 <label for="search-operator">Operador</label>
                 <select id="search-operator" class="form-select form-select-sm" name="operador">
@@ -39,14 +40,15 @@
                     <option value="comienza-con">Comienza con</option>
                 </select>
             </div>
-            <label for="search-query">Texto a buscar</label>
-            <input id="search-query" class="form-control form-control-sm" name="q" type="search" maxlength="100" placeholder="Buscar persona, lote, manzana, código o vía..." required />
+            <label for="search-query">Nombre o referencia</label>
+            <input id="search-query" class="form-control form-control-sm" name="q" type="search" maxlength="100" aria-describedby="search-hint" required />
+            <p id="search-hint" class="form-text mb-0"></p>
             <label for="search-page-size">Resultados por página</label>
             <select id="search-page-size" class="form-select form-select-sm" name="tamanoPagina">
                 <option value="25" selected>25</option><option value="50">50</option><option value="100">100</option>
             </select>
             <div class="map-search-actions">
-                <button class="btn btn-primary btn-sm" type="submit">Buscar</button>
+                <button class="btn btn-primary btn-sm" type="submit"><partial name="_Icon" model='"search"' /> Buscar</button>
                 <button id="clear-search" class="btn btn-outline-secondary btn-sm" type="button">Limpiar</button>
             </div>
         </form>
@@ -70,16 +72,20 @@
             <p><span class="legend-swatch" style="background:#334155"></span> Baja total</p>
             <p><i class="legend-swatch vias"></i>Vías</p>
         </div>
+        <div class="viewer-notice">Lotes se carga por extensión visible desde zoom 16. Códigos Fijos se carga por extensión visible desde zoom 15 para evitar saturación.</div>
+        </details>
         <div id="selection" class="selection-panel" hidden></div>
         <p id="map-message" class="map-message" role="status"></p>
-        <div class="viewer-notice">Lotes se carga por extensión visible desde zoom 16. Códigos Fijos se carga por extensión visible desde zoom 15 para evitar saturación.</div>
     </aside>
     <div id="map" aria-label="Mapa de capas catastrales"></div>
 </section>
 
 @section Scripts {
+    <script src="~/js/geographic-search.js" asp-append-version="true"></script>
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
     <script>
+        const viewerTools = document.getElementById('viewer-tools');
+        if (window.matchMedia('(max-width: 800px)').matches) viewerTools.open = false;
         const map = L.map('map', { zoomControl: false }).setView([-16.5, -68.15], 13);
         L.control.zoom({ position: 'topright' }).addTo(map);
         L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -123,18 +129,7 @@
         const exportSearchResults = document.getElementById('export-search-results');
         const searchItems = document.getElementById('search-items');
         const searchPagination = document.getElementById('search-pagination');
-        let currentSearchItems = [];
-        const fallbackSearchLayers = ['manzanas', 'lotes', 'codigos-fijos', 'vias'];
-        const searchableFields = {
-            'manzanas': ['UV_MZA', 'UV', 'MZA'], 'lotes': ['NroLote'],
-            'codigos-fijos': ['CodF_SIG', 'CodFijo', 'Nombre'], 'vias': ['Nombre', 'TipoVia', 'OSMID']
-        };
-        const csvFields = {
-            'manzanas': ['IdManzana', 'UV_MZA', 'UV', 'MZA'],
-            'lotes': ['IdLote', 'NroLote', 'IdManzana'],
-            'codigos-fijos': ['IdCodigo', 'CodF_SQL', 'CodF_SIG', 'CodFijo', 'Estado', 'IdLote'],
-            'vias': ['IdVia', 'OBJECTID', 'Nombre', 'TipoVia', 'OSMID']
-        };
+        const geographic = window.geographicSearch;
 
         function setMessage(text, isError = false) {
             message.textContent = text;
@@ -156,9 +151,10 @@
         function selectionContent(key, feature, layer) {
             const content = document.createElement('div');
             const heading = document.createElement('h2');
-            heading.textContent = metadata[key]?.name || key;
+            const presentation = geographic.describe(key, feature.properties);
+            heading.textContent = presentation.title;
             const list = document.createElement('dl');
-            const properties = Object.entries(feature.properties || {});
+            const properties = presentation.details;
             if (properties.length) {
                 properties.forEach(([name, value]) => {
                     const term = document.createElement('dt');
@@ -167,10 +163,6 @@
                     description.textContent = value ?? '-';
                     list.append(term, description);
                 });
-            } else {
-                const description = document.createElement('dd');
-                description.textContent = 'Sin atributos públicos.';
-                list.appendChild(description);
             }
             const actions = document.createElement('div');
             actions.className = 'selection-actions';
@@ -352,11 +344,10 @@
 
         function renderSearchResults(data) {
             searchResults.hidden = false;
-            currentSearchItems = data.items;
-            activeFilter.textContent = `Filtro activo: ${data.capa === 'todas' ? 'Todas las capas' : metadata[data.capa]?.name || data.capa}`;
+            activeFilter.textContent = geographic.layers[data.capa]?.label || 'Resultados';
             searchStatus.textContent = data.total
-                ? `Resultados: ${data.total.toLocaleString('es-BO')} · Página ${data.pagina} de ${Math.max(1, Math.ceil(data.total / data.tamanoPagina))}${data.allLayers ? ' por capa' : ''}`
-                : 'No se encontraron resultados.';
+                ? `Resultados: ${data.total.toLocaleString('es-BO')} · Página ${data.pagina} de ${Math.max(1, Math.ceil(data.total / data.tamanoPagina))}`
+                : 'No se encontraron resultados. Prueba con parte del nombre o cambia la capa.';
             exportSearchResults.hidden = data.items.length === 0;
             searchItems.replaceChildren();
             searchPagination.replaceChildren();
@@ -366,29 +357,29 @@
                 entry.className = 'search-result';
                 entry.setAttribute('role', 'option');
                 entry.setAttribute('aria-selected', 'false');
-                entry.dataset.layer = item.capa;
+                entry.dataset.layer = item.layerKey;
                 entry.dataset.id = String(item.id);
                 const title = document.createElement('strong');
-                title.textContent = `${metadata[item.capa]?.name || item.capa} #${item.id}`;
+                const presentation = geographic.describe(item.layerKey, item.properties);
+                title.textContent = presentation.title;
                 const details = document.createElement('p');
-                const values = Object.entries(item.properties || {}).slice(0, 3).map(([name, value]) => `${name}: ${value ?? '-'}`);
-                details.textContent = values.join(' · ') || 'Sin atributos públicos.';
+                details.textContent = [presentation.layer, ...presentation.details.map(([name, value]) => `${name}: ${value}`)].join(' · ');
                 const view = document.createElement('button');
                 view.type = 'button';
                 view.className = 'btn btn-outline-primary btn-sm';
                 view.textContent = 'Ver en mapa';
-                view.addEventListener('click', () => showSearchFeature(item.capa, item.id));
+                view.addEventListener('click', () => showSearchFeature(item.layerKey, item.id));
                 entry.append(title, details, view);
                 searchItems.appendChild(entry);
             });
 
-            if (data.hasPrevious || data.hasNext || data.total > data.tamanoPagina) {
+            if (data.total > data.tamanoPagina || data.pagina > 1) {
                 const previous = document.createElement('button');
                 previous.type = 'button';
                 previous.className = 'btn btn-outline-secondary btn-sm';
                 previous.textContent = 'Anterior';
-                previous.disabled = !data.hasPrevious && data.pagina === 1;
-                previous.addEventListener('click', () => search(data.pagina - 1));
+                previous.disabled = data.pagina === 1;
+                previous.addEventListener('click', () => search(data.pagina - 1, true));
                 const page = document.createElement('span');
                 page.className = 'search-page';
                 page.textContent = String(data.pagina);
@@ -396,52 +387,37 @@
                 next.type = 'button';
                 next.className = 'btn btn-outline-secondary btn-sm';
                 next.textContent = 'Siguiente';
-                next.disabled = data.hasNext === undefined ? data.pagina >= Math.ceil(data.total / data.tamanoPagina) : !data.hasNext;
-                next.addEventListener('click', () => search(data.pagina + 1));
+                next.disabled = data.pagina >= Math.ceil(data.total / data.tamanoPagina);
+                next.addEventListener('click', () => search(data.pagina + 1, true));
                 searchPagination.append(previous, page, next);
             }
         }
 
-        async function search(page = 1) {
-            const q = searchQuery.value.trim();
+        async function search(page = 1, keepFilters = false) {
+            const q = keepFilters ? searchState.q : searchQuery.value.trim();
             if (!q) return;
             searchAbort?.abort();
             searchAbort = new AbortController();
-            searchState = { capa: searchLayer.value, q, pagina: page, campo: searchField.value, operador: searchOperator.value, tamanoPagina: searchPageSize.value };
+            searchState = keepFilters ? { ...searchState, pagina: page }
+                : { capa: searchLayer.value, q, pagina: page, campo: searchField.value, operador: searchOperator.value, tamanoPagina: searchPageSize.value };
             searchResults.hidden = false;
             searchItems.replaceChildren();
             searchPagination.replaceChildren();
-            activeFilter.textContent = `Filtro activo: ${searchLayer.options[searchLayer.selectedIndex].text}`;
+            activeFilter.textContent = geographic.layers[searchState.capa].label;
             exportSearchResults.hidden = true;
             searchStatus.textContent = 'Buscando...';
             try {
-                const layerKeys = searchState.capa === 'todas'
-                    ? (Object.keys(metadata).length ? Object.keys(metadata) : fallbackSearchLayers)
-                    : [searchState.capa];
-                const responses = await Promise.all(layerKeys.map(async capa => {
-                    const params = new URLSearchParams({ capa, q, pagina: String(page), tamanoPagina: searchState.tamanoPagina });
-                    if (searchState.capa !== 'todas' && searchState.campo) {
-                        params.set('campo', searchState.campo);
-                        params.set('operador', searchState.operador);
-                    }
-                    const response = await fetch(`/api/busqueda?${params}`, { signal: searchAbort.signal });
-                    const result = await response.json();
-                    if (!response.ok) throw new Error(result.message || result.detail || 'No fue posible realizar la búsqueda.');
-                    return result;
-                }));
-                const data = responses.length === 1
-                    ? { ...responses[0], items: responses[0].items.map(item => ({ ...item, capa: responses[0].capa })) }
-                    : {
-                        capa: 'todas',
-                        total: responses.reduce((total, result) => total + result.total, 0),
-                        pagina: page,
-                        tamanoPagina: responses[0]?.tamanoPagina || 25,
-                        allLayers: true,
-                        hasPrevious: page > 1,
-                        hasNext: responses.some(result => result.pagina * result.tamanoPagina < result.total),
-                        items: responses.flatMap(result => result.items.map(item => ({ ...item, capa: result.capa })))
-                    };
-                renderSearchResults(data);
+                const params = new URLSearchParams({ capa: searchState.capa, q: searchState.q, pagina: String(page), tamanoPagina: searchState.tamanoPagina });
+                if (searchState.campo) {
+                    params.set('campo', searchState.campo);
+                    params.set('operador', searchState.operador);
+                }
+                const pending = searchAbort;
+                const response = await fetch(`/api/registros?${params}`, { signal: pending.signal });
+                if (response.status === 401) throw new Error('Tu sesión terminó. Vuelve a iniciar sesión.');
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.message || 'No fue posible realizar la búsqueda.');
+                if (!pending.signal.aborted) renderSearchResults(data);
             } catch (error) {
                 if (error.name === 'AbortError') return;
                 searchStatus.textContent = error.message;
@@ -496,12 +472,6 @@
             });
         }
 
-        function csvValue(value) {
-            const text = String(value ?? '');
-            const safeText = /^[=+\-\x40]/.test(text) ? `'${text}` : text;
-            return `"${safeText.replaceAll('"', '""')}"`;
-        }
-
         function exportCurrentResults() {
             const params = new URLSearchParams({ capa: searchState.capa, q: searchState.q });
             if (searchState.capa !== 'todas' && searchState.campo) {
@@ -517,22 +487,15 @@
         });
 
         function populateFields() {
-            const fields = searchableFields[searchLayer.value] || [];
-            advancedFilters.hidden = fields.length === 0;
-            searchField.replaceChildren();
-            fields.forEach(field => {
-                const option = document.createElement('option');
-                option.value = field;
-                option.textContent = field;
-                searchField.appendChild(option);
-            });
+            advancedFilters.hidden = searchLayer.value === 'todas';
+            geographic.setup(searchLayer.value, searchQuery, searchField, searchOperator);
             updateOperators();
         }
 
         function updateOperators() {
-            const numeric = searchField.value === 'CodFijo';
-            searchOperator.querySelectorAll('option').forEach(option => option.hidden = numeric && option.value !== 'igual');
-            if (numeric) searchOperator.value = 'igual';
+            geographic.updateOperator(searchField, searchOperator);
+            document.getElementById('search-hint').textContent = searchField.value
+                ? 'Escribe solo el valor del campo seleccionado.' : geographic.layers[searchLayer.value].hint;
         }
 
         searchLayer.addEventListener('change', populateFields);
@@ -545,7 +508,7 @@
             searchLayer.value = 'todas';
             searchResults.hidden = true;
             activeFilter.textContent = '';
-            currentSearchItems = [];
+            populateFields();
             exportSearchResults.hidden = true;
             searchItems.replaceChildren();
             searchPagination.replaceChildren();

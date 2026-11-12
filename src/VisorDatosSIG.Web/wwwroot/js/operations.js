@@ -115,12 +115,13 @@
         let tracks = [], playing, busy = false, fit = true;
         const worker = get('monitor-worker');
         const play = get('monitor-play');
+        const playLabel = play.querySelector('span');
         play.disabled = true;
         function stop() {
             clearInterval(playing);
             playing = undefined;
             playback.clearLayers();
-            play.textContent = 'Reproducir recorrido';
+            playLabel.textContent = 'Reproducir recorrido';
         }
         async function refresh() {
             if (busy || playing) return;
@@ -192,7 +193,7 @@
         get('monitor-filter').addEventListener('submit', event => { event.preventDefault(); stop(); fit = true; refresh(); });
         play.addEventListener('click', () => {
             if (playing) return stop();
-            play.textContent = 'Detener reproducción';
+            playLabel.textContent = 'Detener reproducción';
             const markers = tracks.map(track => L.circleMarker(track[0], { radius: 8, color: '#c2410c' }).addTo(playback));
             let index = 0;
             playing = setInterval(() => {
@@ -388,9 +389,29 @@
         load();
         window.addEventListener('pagehide', () => stopTracking());
     }
-    try {
-        if (root.dataset.operation === 'assign') assignments();
-        if (root.dataset.operation === 'monitor') monitor();
-        if (root.dataset.operation === 'field') field();
-    } catch (error) { status(error.message); }
+    async function initialize() {
+        root.setAttribute('aria-busy', 'true');
+        status('Comprobando disponibilidad de operaciones…');
+        const controls = root.querySelectorAll('input:not([type="hidden"]), select, button, textarea');
+        const disabled = [...controls].map(control => control.disabled);
+        controls.forEach(control => control.disabled = true);
+        try {
+            const data = await request('Preparacion');
+            if (!data.ready) {
+                get('operation-status').classList.add('operation-alert');
+                status('Operaciones pendientes de configuración. El administrador debe instalar la extensión SQL para habilitar esta pantalla.');
+                if (root.dataset.operation !== 'field' && window.L) mapView();
+                return;
+            }
+            controls.forEach((control, index) => control.disabled = disabled[index]);
+            status('');
+            if (root.dataset.operation === 'assign') assignments();
+            if (root.dataset.operation === 'monitor') monitor();
+            if (root.dataset.operation === 'field') field();
+        } catch (error) {
+            get('operation-status').classList.add('operation-alert');
+            status(error.message);
+        } finally { root.removeAttribute('aria-busy'); }
+    }
+    initialize();
 })();

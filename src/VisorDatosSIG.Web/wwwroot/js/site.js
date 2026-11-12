@@ -15,20 +15,69 @@ document.addEventListener('DOMContentLoaded', () => {
     const sidebar = document.getElementById('app-sidebar');
     const sidebarToggle = document.getElementById('sidebar-toggle');
     const sidebarCollapse = document.getElementById('sidebar-collapse');
+    const sidebarClose = document.getElementById('sidebar-close');
     const sidebarBackdrop = document.getElementById('sidebar-backdrop');
+    const mobile = window.matchMedia('(max-width: 800px)');
+    const main = document.querySelector('.app-main');
     const setSidebarOpen = open => {
+        const wasOpen = shell.classList.contains('sidebar-open');
         shell.classList.toggle('sidebar-open', open);
         if (sidebarToggle) sidebarToggle.setAttribute('aria-expanded', String(open));
         if (sidebarBackdrop) sidebarBackdrop.hidden = !open;
+        if (main) main.inert = open;
+        if (open) sidebarClose?.focus();
+        else if (wasOpen && mobile.matches) sidebarToggle?.focus();
     };
-    if (sidebar && localStorage.getItem('visordatos.sidebar') === 'collapsed') shell.classList.add('sidebar-collapsed');
+    const updateCollapse = collapsed => {
+        shell.classList.toggle('sidebar-collapsed', collapsed);
+        if (!sidebarCollapse) return;
+        const label = collapsed ? 'Expandir navegación' : 'Contraer navegación';
+        sidebarCollapse.setAttribute('aria-label', label);
+        sidebarCollapse.setAttribute('aria-expanded', String(!collapsed));
+        sidebarCollapse.title = label;
+    };
+    if (sidebar) {
+        try { updateCollapse(localStorage.getItem('visordatos.sidebar') === 'collapsed'); } catch { updateCollapse(false); }
+    }
     sidebarCollapse?.addEventListener('click', () => {
-        const collapsed = shell.classList.toggle('sidebar-collapsed');
-        localStorage.setItem('visordatos.sidebar', collapsed ? 'collapsed' : 'expanded');
+        const collapsed = !shell.classList.contains('sidebar-collapsed');
+        updateCollapse(collapsed);
+        try { localStorage.setItem('visordatos.sidebar', collapsed ? 'collapsed' : 'expanded'); } catch { /* La navegación sigue operativa. */ }
     });
     sidebarToggle?.addEventListener('click', () => setSidebarOpen(!shell.classList.contains('sidebar-open')));
+    sidebarClose?.addEventListener('click', () => setSidebarOpen(false));
     sidebarBackdrop?.addEventListener('click', () => setSidebarOpen(false));
+    mobile.addEventListener('change', () => setSidebarOpen(false));
     document.addEventListener('keydown', event => { if (event.key === 'Escape') setSidebarOpen(false); });
+    document.querySelectorAll('[data-password-toggle]').forEach(button => {
+        button.addEventListener('click', () => {
+            const input = document.getElementById(button.dataset.passwordToggle);
+            if (!input) return;
+            const show = input.type === 'password';
+            input.type = show ? 'text' : 'password';
+            button.setAttribute('aria-pressed', String(show));
+            button.setAttribute('aria-label', show ? 'Ocultar contraseña' : 'Mostrar contraseña');
+            const icon = button.querySelector('use');
+            if (icon) icon.setAttribute('href', icon.getAttribute('href').split('#')[0] + (show ? '#eye-off' : '#eye'));
+        });
+    });
+    const userFilter = document.getElementById('user-filter');
+    if (userFilter) {
+        const rows = [...document.querySelectorAll('#user-rows [data-user-search]')];
+        const count = document.getElementById('user-filter-count');
+        const normalize = value => value.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLocaleLowerCase('es');
+        const update = () => {
+            const term = normalize(userFilter.value.trim());
+            let visible = 0;
+            rows.forEach(row => {
+                row.hidden = !normalize(row.dataset.userSearch).includes(term);
+                if (!row.hidden) visible++;
+            });
+            count.textContent = visible === 0 ? 'No se encontraron cuentas.' : visible + (visible === 1 ? ' cuenta' : ' cuentas');
+        };
+        userFilter.addEventListener('input', update);
+        update();
+    }
     document.querySelectorAll('[data-confirm-action]').forEach(form => form.addEventListener('submit', event => {
         if (!window.confirm(form.dataset.confirmAction)) event.preventDefault();
     }));

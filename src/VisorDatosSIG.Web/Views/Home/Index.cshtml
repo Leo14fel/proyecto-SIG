@@ -1,25 +1,27 @@
 ﻿@model IEnumerable<VisorDatosSIG.Web.Models.LayerCardViewModel>
 @{
-    ViewData["Title"] = "Panel de capas";
+    ViewData["Title"] = "Panel principal";
     var counts = (Dictionary<byte, int>)ViewBag.ConnectionCounts;
     var total = counts.Values.Sum();
 }
 
 <section class="dashboard-header dashboard-hero">
-    <div><p class="eyebrow">VisorDatosSIG</p><h1>Panel principal</h1><p>Información cartográfica oficial, consultada directamente desde SQL Server.</p></div>
-    <div class="dashboard-actions"><a class="btn btn-primary" asp-controller="Visor" asp-action="Index">Abrir visor</a><a class="btn btn-outline-primary" asp-controller="Registros" asp-action="Index">Explorar registros</a></div>
+    <div><p class="eyebrow">Gestión territorial</p><h1>Panel principal</h1><p>Consulta el estado de las conexiones y accede a los datos del catastro.</p></div>
+    <div class="dashboard-actions"><a class="btn btn-light" asp-controller="Visor" asp-action="Index"><partial name="_Icon" model='"map"' /> Abrir visor</a><a class="btn btn-outline-light" asp-controller="Registros" asp-action="Index"><partial name="_Icon" model='"data"' /> Explorar registros</a></div>
 </section>
-<section class="detail-card mb-3" aria-labelledby="water-stats">
-    <h2 id="water-stats">Conexiones de agua</h2>
-    <p>Total <strong>@total.ToString("N0")</strong></p>
-    <div class="row g-2">
+<section class="water-overview" aria-labelledby="water-stats">
+    <div class="d-flex align-items-center justify-content-between gap-2 mb-3">
+        <h2 id="water-stats" class="mb-0"><partial name="_Icon" model='"drop"' /> Conexiones de agua</h2>
+        <span><strong class="water-total">@total.ToString("N0")</strong> total</span>
+    </div>
+    <div class="water-states">
     @for (var i = 0; i < VisorDatosSIG.Domain.Entities.WaterOperations.States.Length; i++)
     {
         var count = counts.GetValueOrDefault((byte)(i + 1));
         var percentage = total == 0 ? 0 : (int)Math.Round(100d * count / total);
         var state = VisorDatosSIG.Domain.Entities.WaterOperations.States[i];
-        <div class="col-6 col-md">
-            <strong>@count.ToString("N0")</strong><br />@state
+        <div class="water-state">
+            <strong>@count.ToString("N0")</strong><span>@state</span>
             <progress class="w-100" max="100" value="@percentage" aria-label="@state">@percentage%</progress>
         </div>
     }
@@ -29,11 +31,19 @@
 @foreach (var layer in Model)
 {
     <article class="layer-card">
+        <span class="module-icon"><partial name="_Icon" model='@(layer.Name switch { "Manzanas" => "grid", "Lotes" => "layers", "Vías" => "route", _ => "pin" })' /></span>
         <p>@layer.Name</p>
         <strong>@layer.RecordCount.ToString("N0")</strong>
         <span>registros oficiales</span>
     </article>
 }
 </section>
-<section class="quick-actions" aria-label="Accesos rápidos"><a asp-controller="Visor" asp-action="Index">Abrir visor cartográfico</a><a asp-controller="Registros" asp-action="Index" asp-route-capa="lotes">Consultar lotes</a><a asp-controller="Registros" asp-action="Index" asp-route-capa="codigos-fijos">Buscar persona o código</a></section>
-<aside class="diagnostic-notice">Las capas y los conteos se consultan desde SQL Server.</aside>
+<section class="quick-actions" aria-label="Accesos rápidos">
+    @if (User.IsInRole("Administrador"))
+    {
+        <a asp-controller="Operaciones" asp-action="Asignaciones"><partial name="_Icon" model='"route"' /> Planificar asignaciones</a>
+        <a asp-controller="Operaciones" asp-action="Monitoreo"><partial name="_Icon" model='"pulse"' /> Ver recorridos</a>
+    }
+    <a asp-controller="Registros" asp-action="Index" asp-route-capa="lotes"><partial name="_Icon" model='"layers"' /> Consultar lotes</a>
+    <a asp-controller="Registros" asp-action="Index" asp-route-capa="codigos-fijos"><partial name="_Icon" model='"search"' /> Buscar cliente o código</a>
+</section>

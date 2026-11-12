@@ -1,19 +1,18 @@
 @{ ViewData["Title"] = "Asignaciones"; }
 <partial name="_MapaOperativo" />
 <section data-operation="assign">
-    <h1>Asignaciones de agua</h1>
-    <p>Selecciona el trabajador y marca en el mapa el inicio de la ruta.</p>
+    <partial name="_ModuleHeading" model='("route", "Asignaciones de agua", "Elige el trabajador, marca el punto de partida en el mapa y revisa la ruta antes de guardarla.")' />
     @Html.AntiForgeryToken()
-    <form id="assignment-form" class="row g-2 mb-3">
+    <form id="assignment-form" class="row g-3 mb-3 operation-controls">
         <label class="col-md">Operación<select id="operation-kind" class="form-select"><option value="cut">Corte</option><option value="reconnect">Reconexión</option></select></label>
         <label class="col-md">Trabajador<select id="operation-worker" class="form-select" required></select></label>
         <label class="col-md-2">Cantidad<input id="operation-count" class="form-control" type="number" value="10" min="1" max="50" required /></label>
         <div class="col-12 d-flex gap-2 flex-wrap">
-            <button class="btn btn-primary">Calcular ruta óptima</button>
-            <button type="button" id="save-assignment" class="btn btn-success" disabled>Guardar asignación</button>
+            <button class="btn btn-primary"><partial name="_Icon" model='"route"' /> Calcular ruta</button>
+            <button type="button" id="save-assignment" class="btn btn-outline-primary" disabled><partial name="_Icon" model='"check"' /> Guardar asignación</button>
         </div>
     </form>
-    <p id="operation-status" role="status"></p>
+    <p id="operation-status" class="operation-feedback" role="status"></p>
     <div id="operation-map" class="operation-map" aria-label="Mapa de asignación"></div>
     <ol id="operation-stops" class="mt-3"></ol>
 </section>
