@@ -65,6 +65,7 @@ body { color: var(--ui-ink); background: var(--ui-background); }
 .operation-controls { padding: clamp(.85rem, 2vw, 1.35rem); margin-inline: 0; }
 .operation-controls :is(input,select) { margin-top: .35rem; }
 .operation-map { border-radius: var(--ui-radius); background: #e5edec; }
+.operation-map { position: relative; overflow: hidden; }
 #map, .operation-map { isolation: isolate; }
 .operation-feedback:not(:empty) { padding: .65rem .9rem; border-radius: .6rem; background: var(--ui-brand-soft); color: var(--ui-brand-dark); }
 .operation-alert { display: flex; align-items: flex-start; gap: .65rem; padding: .8rem 1rem; border: 1px solid #edcc89; border-radius: .65rem; background: #fff5de; color: #674008; }

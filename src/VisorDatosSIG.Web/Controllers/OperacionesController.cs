@@ -89,6 +89,8 @@ public sealed class OperacionesController(VisorDatosSigDbContext db, IDataProtec
     {
         if (!ModelState.IsValid || input is null || input.Count is < 1 or > 50 || !input.Start.IsValid)
             return BadRequest(new { message = "Selecciona un punto de partida y entre 1 y 50 tareas." });
+        if (!await SchemaReadyAsync(ct))
+            return Conflict(new { message = "Aplica la extensión SQL de la fase 2 para habilitar las asignaciones." });
         if (!await Staff(WaterOperations.Role(input.Reconnect)).AnyAsync(u => u.IdUsuario == input.WorkerId, ct))
             return BadRequest(new { message = "El trabajador no está activo o no tiene el rol requerido." });
 
@@ -98,6 +100,10 @@ public sealed class OperacionesController(VisorDatosSigDbContext db, IDataProtec
             .OrderBy(x => x.IdCodigo).Select(x => new { x.IdCodigo, x.CodFijoValor, x.Nombre, x.Geom }).ToListAsync(ct);
         var points = candidates.Where(x => x.Geom is Point { IsEmpty: false, SRID: 4326 })
             .ToDictionary(x => x.IdCodigo, x => new MapPoint(x.Geom!.Coordinate.Y, x.Geom.Coordinate.X));
+        if (points.Count == 0)
+            return Conflict(new { message = input.Reconnect
+                ? "No hay conexiones cortadas disponibles para reconexión."
+                : "No hay conexiones disponibles para corte. Marca una conexión autorizada como «Para corte» en Registros geográficos." });
         var roads = await db.Vias.AsNoTracking().Where(x => x.Geom != null).OrderBy(x => x.IdVia).Select(x => x.Geom!).ToListAsync(ct);
         var lines = roads.Where(x => x.SRID == 4326).SelectMany(Lines).Where(x => !x.IsEmpty).ToList();
         if (lines.Count == 0) return Conflict(new { message = "No hay vías en WGS 84 para planificar." });

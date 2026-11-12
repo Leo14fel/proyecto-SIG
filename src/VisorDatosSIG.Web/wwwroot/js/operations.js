@@ -32,14 +32,26 @@
         if (!window.L) throw new Error('No se pudo cargar el mapa.');
         const map = L.map('operation-map').setView([-16.38, -60.96], 13);
         L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '© OpenStreetMap contributors' }).addTo(map);
-        fetch('/api/capas', { cache: 'no-store' }).then(r => r.json()).then(items => {
-            const box = items.find(x => x.key === 'vias')?.boundingBox;
-            if (box && !map.userMoved) map.fitBounds([[box[1], box[0]], [box[3], box[2]]]);
-        }).catch(() => {});
-        map.on('dragstart zoomstart click', () => map.userMoved = true);
         const element = document.getElementById('operation-map');
-        if (element && 'ResizeObserver' in window) new ResizeObserver(() => map.invalidateSize({ pan: false })).observe(element);
-        window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize({ pan: false }), 150));
+        let userMoved = false;
+        map.on('dragstart zoomstart click', () => { userMoved = true; });
+        fetch('/api/capas', { cache: 'no-store' }).then(response => {
+            if (!response.ok) throw new Error('No se pudo consultar la extensión del mapa.');
+            return response.json();
+        }).then(items => {
+            const cadastralBounds = items.find(item => item.key === 'manzanas')?.boundingBox;
+            const streetBounds = items.find(item => item.key === 'vias')?.boundingBox;
+            const box = cadastralBounds ?? streetBounds;
+            if (box && !userMoved) {
+                map.invalidateSize({ pan: false });
+                map.fitBounds([[box[1], box[0]], [box[3], box[2]]], { padding: [24, 24], maxZoom: 16 });
+            }
+        }).catch(() => { /* El mapa base permanece disponible. */ });
+        if ('ResizeObserver' in window) {
+            const observer = new ResizeObserver(() => map.invalidateSize({ debounceMoveend: true }));
+            observer.observe(element);
+            map.on('unload', () => observer.disconnect());
+        }
         return map;
     }
     function assignments() {
@@ -47,33 +59,45 @@
         const route = L.featureGroup().addTo(map);
         const kind = get('operation-kind');
         const staff = get('operation-worker');
+        const calculate = get('calculate-assignment');
         const save = get('save-assignment');
         const form = get('assignment-form');
-        let start, marker, draft, busy = false, revision = 0;
+        let start, marker, draft, busy = false, revision = 0, staffRequest = 0;
+        function syncButtons() {
+            calculate.disabled = busy || !staff.value || !start;
+            save.disabled = busy || !draft;
+        }
         function invalidate() {
             revision++;
             draft = null;
-            save.disabled = true;
+            syncButtons();
             route.clearLayers();
             get('operation-stops').replaceChildren();
         }
         async function workers() {
-            invalidate();
+            const version = ++staffRequest;
             const currentKind = kind.value;
-            staff.replaceChildren(new Option('Selecciona un trabajador', ''));
+            staff.replaceChildren(new Option('Cargando trabajadores…', ''));
+            staff.disabled = true;
+            invalidate();
             try {
                 const list = await request('Trabajadores?reconnect=' + (currentKind === 'reconnect'));
-                if (kind.value !== currentKind) return;
-                staff.replaceChildren(new Option('Selecciona un trabajador', ''), ...list.map(u => new Option(u.nombre, u.id)));
-                status(list.length ? '' : 'No hay trabajadores activos para esta operación.');
-            } catch (error) { status(error.message); }
+                if (version !== staffRequest) return;
+                staff.replaceChildren(new Option(list.length ? 'Selecciona un trabajador' : 'Sin trabajadores disponibles', ''), ...list.map(u => new Option(u.nombre, u.id)));
+                staff.disabled = list.length === 0;
+                status(list.length ? 'Selecciona un trabajador y marca el punto de partida.' : 'No hay trabajadores activos con el rol de ' + (currentKind === 'reconnect' ? 'Reconector.' : 'Cortador.'));
+            } catch (error) {
+                if (version !== staffRequest) return;
+                staff.replaceChildren(new Option('Error al cargar trabajadores', ''));
+                status(error.message);
+            } finally { syncButtons(); }
         }
         kind.addEventListener('change', workers);
         staff.addEventListener('change', invalidate);
         get('operation-count').addEventListener('input', invalidate);
         map.on('click', e => {
-            invalidate();
             start = { lat: e.latlng.lat, lng: e.latlng.lng };
+            invalidate();
             if (marker) marker.setLatLng(e.latlng);
             else marker = L.marker(e.latlng).addTo(map);
             status('Punto de partida seleccionado.');
@@ -81,13 +105,15 @@
         async function plan(persist) {
             if (busy) return;
             if (!start) return status('Marca el punto de partida en el mapa.');
+            if (!staff.value) return status('Selecciona un trabajador.');
+            if (!form.reportValidity()) return;
             if (persist && !draft) return;
             if (!persist) invalidate();
             const version = revision;
             const input = { workerId: Number(staff.value), reconnect: kind.value === 'reconnect',
                 count: Number(get('operation-count').value), start, preview: persist ? draft : null };
             busy = true;
-            save.disabled = true;
+            syncButtons();
             status(persist ? 'Guardando…' : 'Calculando sobre la red de vías…');
             try {
                 const data = await request('Ruta', input);
@@ -105,7 +131,7 @@
                 map.fitBounds(route.getBounds(), { padding: [24, 24], maxZoom: 17 });
                 status(data.stops.length + ' tareas · ' + (data.meters / 1000).toFixed(2) + ' km sobre la red');
             } catch (error) { if (version === revision) status(error.message); }
-            finally { busy = false; save.disabled = !draft; }
+            finally { busy = false; syncButtons(); }
         }
         form.addEventListener('submit', event => { event.preventDefault(); plan(false); });
         save.addEventListener('click', () => plan(true));
@@ -402,7 +428,8 @@
             const data = await request('Preparacion');
             if (!data.ready) {
                 get('operation-status').classList.add('operation-alert');
-                status('Operaciones pendientes de configuración. El administrador debe instalar la extensión SQL para habilitar esta pantalla.');
+                status('El mapa está disponible para consulta. Para habilitar las operaciones, el administrador debe aplicar la extensión SQL de la fase 2.');
+                get('operation-worker')?.replaceChildren(new Option('Pendiente de configuración SQL', ''));
                 if (root.dataset.operation !== 'field' && window.L) mapView();
                 return;
             }

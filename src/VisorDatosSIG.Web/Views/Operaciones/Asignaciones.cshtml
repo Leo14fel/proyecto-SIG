@@ -8,7 +8,7 @@
         <label class="col-md">Trabajador<select id="operation-worker" class="form-select" required></select></label>
         <label class="col-md-2">Cantidad<input id="operation-count" class="form-control" type="number" value="10" min="1" max="50" required /></label>
         <div class="col-12 d-flex gap-2 flex-wrap">
-            <button class="btn btn-primary"><partial name="_Icon" model='"route"' /> Calcular ruta</button>
+            <button id="calculate-assignment" class="btn btn-primary" type="submit" disabled><partial name="_Icon" model='"route"' /> Calcular ruta</button>
             <button type="button" id="save-assignment" class="btn btn-outline-primary" disabled><partial name="_Icon" model='"check"' /> Guardar asignación</button>
         </div>
     </form>
