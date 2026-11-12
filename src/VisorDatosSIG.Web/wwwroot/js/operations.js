@@ -242,7 +242,7 @@
         let task, position, tracking, trackTimer, nativePending, saving = false;
         let photos = [];
         function showPhotos() {
-            get('photo-status').textContent = photos.length + '/3 fotos listas.';
+            get('photo-status').textContent = photos.length ? photos.length + '/3 fotos listas: ' + photos.map(photo => photo.name).join(', ') : 'Sin fotos seleccionadas.';
             get('clear-photos').hidden = !photos.length;
         }
         get('clear-photos').onclick = () => { photos = []; showPhotos(); };
@@ -417,6 +417,9 @@
         form.onsubmit = async e => {
             e.preventDefault();
             if (saving || !task) return;
+            const observed = form.elements.Observed.value === 'true';
+            const description = observed ? 'registrar la observación' : 'confirmar el trabajo realizado';
+            if (!window.confirm('¿Deseas ' + description + ' de la parada ' + task.sequence + '? Se guardará con la ubicación GPS actual.')) return;
             saving = true;
             const selected = task;
             const submit = form.querySelector('button[type="submit"], button:not([type])');
