@@ -1,20 +1,20 @@
 # PWA de VisorDatosSIG
 
-## Arquitectura
+## Arquitectura y alcance
 
-La PWA se implementa dentro de `src/VisorDatosSIG.Web`. Conserva ASP.NET Core MVC, autenticación por cookies, SQL Server y Leaflet; no existe una base de datos ni backend alternativo.
+La PWA se implementa dentro de `src/VisorDatosSIG.Web` y es el cliente oficial para escritorio y campo. Conserva ASP.NET Core MVC, autenticación por cookies, SQL Server y Leaflet; no existe una base de datos ni backend alternativo. El proyecto MAUI histórico se conserva fuera de la solución compilable y no forma parte de la entrega.
 
 - `wwwroot/manifest.webmanifest`: nombre, modo `standalone`, colores e iconos locales.
 - `wwwroot/icons/`: iconos PNG de 192, 512 y 512 maskable, más su fuente SVG.
 - `wwwroot/service-worker.js`: caché público y pantalla de contingencia.
 - `wwwroot/offline.html`: experiencia offline autocontenida con botón de reintento.
-- `wwwroot/js/site.js`: registro seguro del Service Worker e instalación opcional.
+- `wwwroot/js/site.js`: registro seguro del Service Worker e instalación desde Login o el aviso disponible después de iniciar sesión.
 
 ## Caché y seguridad
 
 El Service Worker cachea únicamente archivos públicos estáticos: CSS, JavaScript, Bootstrap e iconos. Las navegaciones HTML siempre se solicitan a la red y, si la red falla, muestran `offline.html`.
 
-No se cachean `/Cuenta`, `/Administracion`, `/api`, `/Visor`, respuestas GeoJSON, CSV, cookies, tokens ni páginas autenticadas. La PWA no ofrece consultas GIS sin conexión ni almacena credenciales.
+No se cachean `/Cuenta`, `/Administracion`, `/api`, `/Visor`, respuestas GeoJSON, CSV, cookies, tokens ni páginas autenticadas. La PWA no ofrece consultas GIS sin conexión ni almacena credenciales. Los recursos operativos estáticos se cachean para que la interfaz muestre una contingencia coherente cuando se interrumpe la red, pero las tareas y resultados siempre requieren servidor.
 
 Leaflet se mantiene desde su CDN actual y el mapa base de OpenStreetMap se consulta bajo demanda. Ninguno se cachea en masa: el visor necesita conectividad para librerías remotas no presentes y para los mosaicos del mapa base.
 
@@ -26,10 +26,10 @@ La Web confía en `X-Forwarded-For` y `X-Forwarded-Proto` solo si el proxy es lo
 
 1. Abra la URL HTTPS establecida para VisorDatosSIG.
 2. Complete cualquier PIN de Cloudflare antes de llegar al Login.
-3. Cuando Chrome habilite la instalación, use **INSTALAR VISORDATOSSIG** o el menú de Chrome, **Instalar aplicación**.
+3. En Login, pulse **Instalar aplicación**. Cuando Chrome o Edge entregue la solicitud nativa, confírmela. Si el navegador aún no la habilita, abra su menú y elija **Instalar aplicación**.
 4. Abra el icono **VisorSIG** desde la pantalla de inicio.
 
-La instalación requiere HTTPS (o `localhost` para desarrollo). Si no hay sesión, la ruta inicial redirige al Login normal.
+La instalación requiere HTTPS (o `localhost` para desarrollo). Si no hay sesión, la ruta inicial redirige al Login normal. El botón no vuelve a ofrecer la instalación cuando el navegador ya ejecuta la aplicación en modo standalone.
 
 ### iPhone/iPad
 
@@ -49,10 +49,16 @@ El proceso debe permanecer en ejecución. El PIN de Cloudflare y la cookie de Vi
 
 Para un dominio estable, cree un túnel administrado con una cuenta Cloudflare y un dominio propio, agregue una ruta pública HTTPS al origen local, aplique Cloudflare Access y ejecute el túnel con su token o credenciales fuera del repositorio. No guarde tokens, certificados ni URLs temporales en Git.
 
+## Operación de campo
+
+El trabajador abre **Mis tareas** desde la PWA. La pantalla usa Geolocation API en contexto HTTPS para obtener posición, muestra destino, distancia y precisión, abre la navegación externa compatible y permite adjuntar fotos JPEG/PNG con la cámara del navegador. Al guardar, el servidor valida precisión, proximidad, pertenencia de la tarea y conserva hora UTC, evidencia y resultado.
+
+El monitoreo de posiciones de la PWA solo funciona mientras la página de campo permanece abierta y activa. Los navegadores pueden pausar JavaScript, GPS y red en segundo plano o al cerrar la PWA; no se promete seguimiento continuo fuera de esas capacidades. La posición del resultado se vuelve a solicitar antes de guardar, incluso para observaciones.
+
 ## Pruebas realizadas
 
 - Manifest, iconos, Service Worker y página offline: comprobación HTTP local.
 - Build y pruebas unitarias: ejecutados localmente.
 - Login, Dashboard, API de capas, búsqueda `AGUILAR`, GeoJSON y Logout: comprobados previamente contra SQL local.
 
-Pendiente de una URL HTTPS funcional y de un dispositivo físico: instalación desde Chrome Android, modo standalone, PIN de Cloudflare, exportación CSV móvil, interacción táctil, pruebas en otra red y navegación offline con un Service Worker ya instalado.
+Pendiente de una URL HTTPS funcional y de un dispositivo físico: instalación desde Chrome Android, Edge y Safari iOS, modo standalone, PIN de Cloudflare, GPS, cámara, interacción táctil, pruebas en otra red y contingencia offline con un Service Worker ya instalado.

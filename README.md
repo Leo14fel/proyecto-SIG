@@ -39,4 +39,4 @@ La navegación actual incluye `/Registros`: listados SQL paginados por capa, det
 
 ## PWA
 
-La Web puede instalarse como PWA desde un origen HTTPS. La aplicación mantiene las consultas y la autenticación en el servidor; el modo offline solo muestra una página de contingencia y nunca cachea datos privados ni GIS. Consulte [docs/PWA.md](docs/PWA.md) para instalación móvil, caché, Cloudflare Quick Tunnel y las limitaciones de un hostname temporal.
+La Web es el cliente oficial para escritorio y campo: puede instalarse como PWA desde un origen HTTPS. La aplicación mantiene las consultas y la autenticación en el servidor; el modo offline solo muestra una página de contingencia y nunca cachea datos privados ni GIS. Consulte [docs/PWA.md](docs/PWA.md) para instalación móvil, caché, GPS, captura de evidencia y las limitaciones de un hostname temporal. El proyecto MAUI histórico se conserva en `src/VisorDatosSIG.Mobile`, pero no forma parte de la solución ni de la entrega PWA.

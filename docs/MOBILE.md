@@ -1,4 +1,4 @@
-# Uso móvil local
+# Cliente móvil PWA
 
 ## Iniciar el servidor
 
@@ -10,16 +10,14 @@ La cadena `ConnectionStrings:DefaultConnection` debe existir en User Secrets del
 
 El script comprueba que el puerto 8080 esté libre y muestra la URL LAN que debe usar el teléfono.
 
-## Instalar la APK Debug
+Abra la URL HTTPS de la Web en el navegador del teléfono e inicie sesión. En Login, pulse **Instalar aplicación** y confirme el aviso del navegador. Si no hay aviso, use el menú de Chrome/Edge y elija **Instalar aplicación**. En Safari iOS, use **Compartir -> Agregar a pantalla de inicio**.
 
-Con el teléfono vinculado por ADB:
-
-```powershell
-& "C:\Users\brand\AppData\Local\Android\Sdk\platform-tools\adb.exe" install -r "src\VisorDatosSIG.Mobile\bin\Debug\net10.0-android\publish\com.visordatos.sig.mobile-Signed.apk"
-```
-
-La APK Debug usa inicialmente `http://192.168.0.17:8080` y conserva una dirección ya guardada por el usuario. Para cambiarla, usa **Servidor** en la cabecera de la aplicación.
+La PWA usa la misma URL del servidor Web, la cookie autenticada y los endpoints existentes. No descarga APK ni se conecta directamente a SQL Server.
 
 ## SQL Server
 
-El script valida que `ConnectionStrings:DefaultConnection` exista en User Secrets o como variable de entorno, sin mostrar su valor. SQL Server solo es usado por la Web; la APK no se conecta directamente a la base de datos.
+El script valida que `ConnectionStrings:DefaultConnection` exista en User Secrets o como variable de entorno, sin mostrar su valor. SQL Server solo es usado por la Web; la PWA no se conecta directamente a la base de datos.
+
+## Proyecto MAUI histórico
+
+`src/VisorDatosSIG.Mobile` se conserva como referencia y no se elimina. Está fuera de `VisorDatosSIG.sln`, no requiere compilarse para esta entrega y no representa el cliente móvil oficial.

@@ -2,6 +2,16 @@
 
 Ejecute `dotnet test VisorDatosSIG.sln`.
 
+## Ejecución auditada 2026-11-12
+
+- `dotnet test VisorDatosSIG.sln`: correcto, 18 de 18 pruebas superadas.
+- `dotnet build src/VisorDatosSIG.Web/VisorDatosSIG.Web.csproj --no-restore`: correcto, sin advertencias ni errores.
+- Las tres pruebas PWA verifican manifiesto instalable, exclusión de rutas privadas en el Service Worker y botón de instalación en Login.
+- `dotnet list src/VisorDatosSIG.Infrastructure/VisorDatosSIG.Infrastructure.csproj package --include-transitive --vulnerable`: sin paquetes vulnerables en `nuget.org`.
+- SQL Server, aplicación de `10_OperacionesAgua.sql`, HTTP autenticado, navegador HTTPS y teléfono físico no se ejecutaron durante esta auditoría. No se declaran validados.
+
+El repositorio incluye `NuGet.Config` para evitar fuentes y carpetas de reserva locales de DevExpress que no usa el proyecto. La restauración se realiza exclusivamente desde `nuget.org`.
+
 Las pruebas unitarias cubren verificación y generación PBKDF2-SHA256, reconocimiento de capas oficiales, diagnóstico de componentes ausentes y rechazo de capas arbitrarias. La comprobación manual de autenticación requiere SQL Server local y una cuenta oficial activa; no modifica la base.
 
 Valores de inyección como `'`, `' OR 1=1 --`, `%` y `AGUILAR'--` se transmiten únicamente como parámetros de LINQ/EF Core; no se construye SQL con nombres ni valores del cliente. Falta una prueba de integración con SQL aislado que lo demuestre en ejecución.
@@ -32,5 +42,5 @@ Se verificó sin sesión que `/Registros` y el deep link de Visor redirigen a Lo
 ## PWA
 
 - Build y pruebas unitarias correctos después de incorporar manifest, Service Worker y activos PWA.
-- Pendiente de prueba física: instalación Chrome Android, modo standalone, `beforeinstallprompt`, flujo PIN de Cloudflare, gestos táctiles, exportación CSV móvil y contingencia offline tras la instalación del Service Worker.
+- Pendiente de prueba física: instalación Chrome Android, Edge y Safari iOS; modo standalone, `beforeinstallprompt`, flujo PIN de Cloudflare, GPS, cámara, gestos táctiles, exportación CSV móvil y contingencia offline tras la instalación del Service Worker.
 - No se considera que la consulta GIS funcione offline: el Service Worker devuelve `offline.html` únicamente cuando falla una navegación de red.

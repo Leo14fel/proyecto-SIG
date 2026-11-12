@@ -37,6 +37,9 @@
             if (box && !map.userMoved) map.fitBounds([[box[1], box[0]], [box[3], box[2]]]);
         }).catch(() => {});
         map.on('dragstart zoomstart click', () => map.userMoved = true);
+        const element = document.getElementById('operation-map');
+        if (element && 'ResizeObserver' in window) new ResizeObserver(() => map.invalidateSize({ pan: false })).observe(element);
+        window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize({ pan: false }), 150));
         return map;
     }
     function assignments() {

@@ -82,36 +82,63 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!window.confirm(form.dataset.confirmAction)) event.preventDefault();
     }));
 
-        const prompt = document.getElementById('pwa-install');
-        const action = document.getElementById('pwa-install-action');
-        const dismiss = document.getElementById('pwa-install-dismiss');
-        const message = document.getElementById('pwa-install-message');
-        if (!prompt || !action || !dismiss || isStandalone || sessionStorage.getItem('pwa-install-dismissed') === 'true') return;
+    const prompt = document.getElementById('pwa-install');
+    const action = document.getElementById('pwa-install-action');
+    const dismiss = document.getElementById('pwa-install-dismiss');
+    const message = document.getElementById('pwa-install-message');
+    const installButtons = [...document.querySelectorAll('[data-pwa-install]')];
+    const loginStatus = document.getElementById('login-install-status');
+    const isiOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    let deferredPrompt;
 
-        let deferredPrompt;
+    if (prompt && action && dismiss && !isStandalone) {
         const show = () => { prompt.hidden = false; };
         const hide = () => { prompt.hidden = true; };
+        const showInstructions = () => {
+            message.textContent = isiOS
+                ? 'En Safari, toca Compartir y luego Agregar a pantalla de inicio.'
+                : 'En Chrome o Edge, abre el menú del navegador y selecciona Instalar aplicación.';
+            action.hidden = true;
+            show();
+            if (loginStatus) loginStatus.textContent = message.textContent;
+        };
+        const installed = () => {
+            hide();
+            installButtons.forEach(button => {
+                button.disabled = true;
+                button.textContent = 'Aplicación instalada';
+            });
+            if (loginStatus) loginStatus.textContent = 'La aplicación ya está instalada.';
+        };
+        const requestInstall = async () => {
+            if (isStandalone) return installed();
+            if (!deferredPrompt) return showInstructions();
+            deferredPrompt.prompt();
+            const choice = await deferredPrompt.userChoice;
+            deferredPrompt = undefined;
+            if (choice.outcome === 'accepted') hide();
+            else showInstructions();
+        };
         window.addEventListener('beforeinstallprompt', event => {
             event.preventDefault();
             deferredPrompt = event;
-            show();
+            action.hidden = false;
+            message.textContent = 'Instala la aplicación para abrirla desde la pantalla de inicio.';
+            if (sessionStorage.getItem('pwa-install-dismissed') !== 'true') show();
         });
-        if (/iphone|ipad|ipod/i.test(navigator.userAgent)) {
-            message.textContent = 'En Safari, toque Compartir y luego Agregar a pantalla de inicio.';
-            action.hidden = true;
-            show();
-        }
-        action.addEventListener('click', async () => {
-            if (!deferredPrompt) return;
-            deferredPrompt.prompt();
-            await deferredPrompt.userChoice;
-            deferredPrompt = undefined;
-            hide();
-        });
+        installButtons.forEach(button => button.addEventListener('click', requestInstall));
+        action.addEventListener('click', requestInstall);
         dismiss.addEventListener('click', () => {
             sessionStorage.setItem('pwa-install-dismissed', 'true');
             hide();
         });
-        window.addEventListener('appinstalled', hide);
+        if (isiOS) showInstructions();
+        window.addEventListener('appinstalled', installed);
+    } else if (isStandalone) {
+        installButtons.forEach(button => {
+            button.disabled = true;
+            button.textContent = 'Aplicación instalada';
+        });
+    }
     });
 })();

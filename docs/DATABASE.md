@@ -6,11 +6,13 @@ La base local `VisorDatosSIG` contiene las tablas oficiales `Manzanas`, `Lotes`,
 
 Las relaciones espaciales oficiales son `Lotes.IdManzana -> Manzanas.IdManzana` y `CodigosFijos.IdLote -> Lotes.IdLote`. Existen índices espaciales para las cuatro columnas `Geom`.
 
-No existen tablas oficiales de historial de migraciones ni bitácora de accesos. No se agregaron tablas o columnas fuera del diseño físico entregado.
+No existen tablas oficiales de historial de migraciones ni bitácora de accesos. La fase 2 agrega tablas operativas solo mediante la extensión autorizada descrita abajo; no altera las tablas ni las geometrías oficiales.
 
 ## Origen de scripts
 
-`database/official/` contiene exclusivamente los scripts entregados por el docente. `database/extensions/09_Agregar_Rol_Consultor.sql` fue agregado por el equipo porque la especificación exige ese perfil y `dbo.Roles` permite incorporarlo como dato. No altera tablas, columnas, claves ni relaciones.
+`database/official/` contiene exclusivamente los scripts entregados por el docente. `database/extensions/09_Agregar_Rol_Consultor.sql` fue agregado por el equipo porque la especificación exige ese perfil y `dbo.Roles` permite incorporarlo como dato. `database/extensions/10_OperacionesAgua.sql` crea, de forma idempotente, `WaterAssignments`, `WaterTasks`, `WaterEvidence` y `WorkerPositions`, con sus claves, relaciones e indices para la fase 2. Debe ejecutarse manualmente solo con autorización sobre una copia o base habilitada para operaciones.
+
+`WaterTasks` conserva la secuencia de visita, el resultado, la posición reportada y una versión de concurrencia. Su indice único filtrado evita que una conexión tenga más de una tarea pendiente. `WaterEvidence` almacena las fotos asociadas a la tarea y `WorkerPositions` conserva muestras GPS para el monitoreo. El script no registra una bitácora administrativa; esa limitación sigue pendiente.
 
 ## Mapeo SHP autorizado
 

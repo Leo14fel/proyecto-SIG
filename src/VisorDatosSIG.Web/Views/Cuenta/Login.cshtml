@@ -14,6 +14,8 @@
     <input asp-for="ReturnUrl" type="hidden" />
     <div class="mb-3"><label asp-for="Login" class="form-label"></label><div class="login-input"><partial name="_Icon" model='"user"' /><input asp-for="Login" class="form-control" autocomplete="username" autocapitalize="none" spellcheck="false" required /></div><span asp-validation-for="Login" class="text-danger"></span></div>
     <div class="mb-4"><label asp-for="Password" class="form-label"></label><div class="login-input"><partial name="_Icon" model='"lock"' /><input asp-for="Password" class="form-control" autocomplete="current-password" required /><button class="password-toggle" type="button" data-password-toggle="Password" aria-controls="Password" aria-label="Mostrar contraseña" aria-pressed="false"><partial name="_Icon" model='"eye"' /></button></div><span asp-validation-for="Password" class="text-danger"></span></div>
-    <button class="btn btn-primary w-100 login-submit" type="submit">Iniciar sesión <partial name="_Icon" model='"arrow"' /></button>
+     <button class="btn btn-primary w-100 login-submit" type="submit">Iniciar sesión <partial name="_Icon" model='"arrow"' /></button>
+     <button type="button" class="btn btn-outline-primary w-100 login-install" data-pwa-install>Instalar aplicación</button>
+     <p id="login-install-status" class="login-install-status" role="status"></p>
   </form>
 </main>

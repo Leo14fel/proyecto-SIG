@@ -130,6 +130,8 @@ body { color: var(--ui-ink); background: var(--ui-background); }
 .password-toggle { display: grid; place-items: center; position: absolute; right: .25rem; top: 50%; transform: translateY(-50%); width: 2.6rem; height: 2.6rem; border: 0; border-radius: .45rem; background: transparent; color: var(--ui-brand-dark); }
 .password-toggle:hover { background: var(--ui-brand-soft); }
 .login-submit { min-height: 3rem; display: flex; align-items: center; justify-content: center; gap: .55rem; }
+.login-install { min-height: 2.8rem; margin-top: .75rem; }
+.login-install-status { min-height: 1.25rem; margin: .65rem 0 0; color: var(--ui-muted); font-size: .82rem; }
 .form-errors.validation-summary-valid { display: none; }
 .form-errors.validation-summary-errors { color: #8f2525; background: #fff0ef; border: 1px solid #edb9b4; border-radius: .65rem; padding: .75rem; margin-bottom: 1rem; }
 .form-errors ul { margin: 0; padding-left: 1.2rem; }
@@ -154,5 +156,12 @@ body { color: var(--ui-ink); background: var(--ui-background); }
     .module-heading .module-icon { width: 2.4rem; height: 2.4rem; }
     .viewer-panel { max-height: none; }
     .operation-controls .btn, .field-report .btn { min-height: 2.75rem; }
+    .operation-map { min-height: 320px; height: 58dvh; }
+}
+@media (max-width: 390px) {
+    .app-main .app-content { padding-inline: .75rem; }
+    .operation-map { min-height: 300px; }
+    .water-overview { padding: 1rem; }
+    .pwa-install { right: .65rem; bottom: .65rem; left: .65rem; }
 }
 @media (prefers-reduced-motion: reduce) { .app-sidebar { transition: none; } }

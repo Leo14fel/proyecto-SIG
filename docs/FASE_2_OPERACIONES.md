@@ -11,8 +11,8 @@ Fuentes: **INF 442 SIG 2026-10-15** (alcance escrito) y **AlcanceProyecto_2_2026
 | RU-05 | Administrador | Elegir cortador o reconector, indicar cantidad y punto de partida, previsualizar y guardar la ruta numerada. | **Asignaciones** filtra trabajadores por rol activo, admite 1–50 tareas y calcula el orden con Dijkstra sobre la capa Vías. |
 | RU-06 | Administrador | Ver el avance y la ubicación del trabajador durante el recorrido. | **Monitoreo** actualiza cada 8 segundos y separa la ruta planificada de las posiciones recibidas. Incluye filtros de fecha, tipo y trabajador, y reproducción del recorrido, inferidos de las capturas. |
 | RU-07 | Cortador o reconector | Consultar sus tareas en el orden calculado y abrir un punto asignado. | **Mis tareas** lista las asignaciones propias, ordena las paradas y muestra el resultado de las tareas registradas. |
-| RU-08 | Cortador o reconector | Obtener GPS, ver destino y distancia, y abrir navegación de moto, a pie o vehículo. | Android usa GPS nativo y abre Google Maps. La distancia que muestra la ficha es en línea recta. El modo y las indicaciones dependen de la cobertura del proveedor. |
-| RU-09 | Cortador o reconector | Registrar medidor, lectura y evidencia de una operación realizada, u observación si no se pudo completar. | Formulario móvil con hasta tres fotos, límite inferido de las capturas, y resultado Realizado u Observado. |
+| RU-08 | Cortador o reconector | Obtener GPS, ver destino y distancia, y abrir navegación de moto, a pie o vehículo. | La PWA usa Geolocation API por HTTPS y abre Google Maps. La distancia que muestra la ficha es en línea recta. El modo y las indicaciones dependen de la cobertura del proveedor. |
+| RU-09 | Cortador o reconector | Registrar medidor, lectura y evidencia de una operación realizada, u observación si no se pudo completar. | Formulario PWA con hasta tres fotos y resultado Realizado u Observado. |
 | RU-10 | Cortador o reconector | Registrar automáticamente fecha, hora y posición, incluso cuando se informa «casa cerrada». | El servidor registra la hora UTC y exige coordenadas, precisión de hasta 100 m y distancia de hasta 150 m al destino. Son umbrales de implementación. El GPS verifica proximidad reportada y puede ser simulado por el dispositivo. |
 | RU-11 | Administrador | Clasificar a los trabajadores y preparar conexiones para la operación. | Requisito derivado del flujo. En **Administración** se agregan los roles operativos a cuentas activas. En **Registros** se puede marcar una conexión normal para corte. |
 | RU-12 | Cortador o reconector | Leer automáticamente el medidor a partir de una foto. | OCR opcional. La captura y la lectura manual están incluidas. |
@@ -36,13 +36,13 @@ Las casillas marcadas indican que el código está implementado. La puesta en ma
 - [x] Mostrar posiciones del trabajador durante el recorrido, filtros y reproducción.
 - [x] Gestionar roles operativos y marcar conexiones para corte.
 
-### Aplicación Android
+### PWA de campo
 
 - [x] Acceder con usuario y contraseña del cortador o reconector y mostrar sus tareas en el orden calculado.
 - [x] Obtener GPS, mostrar ubicación actual, destino y distancia. Abrir navegación externa en moto, a pie o vehículo según cobertura.
 - [x] Capturar fotos, número de medidor y lectura. Permitir una observación cuando no se pudo realizar el trabajo.
 - [x] Registrar fecha, hora y posición al guardar, incluso para «casa cerrada». Validar precisión y distancia al punto.
-- [x] Enviar ubicaciones de campo al monitoreo durante el recorrido.
+- [x] Enviar ubicaciones de campo al monitoreo mientras la página PWA está abierta y el navegador permite la ejecución.
 - [ ] OCR para leer el medidor desde la foto. Opcional.
 
 ### Puesta en marcha, pruebas y entrega
@@ -50,26 +50,26 @@ Las casillas marcadas indican que el código está implementado. La puesta en ma
 - [ ] Aplicar la extensión SQL en una base autorizada. Confirmar tablas y roles operativos.
 - [ ] Habilitar una cuenta de reconexión y elegir una conexión autorizada para la prueba.
 - [ ] Con una sesión real, verificar tablero, capas, dimensiones, vistas 2D y 3D, búsquedas, filtros, selección por mapa y permisos.
-- [ ] Ejecutar con un Android físico el ciclo Para corte → Cortado → Normal y comprobar la actualización del tablero.
+- [ ] Ejecutar desde la PWA en un teléfono físico el ciclo Para corte → Cortado → Normal y comprobar la actualización del tablero.
 - [ ] Comprobar una observación con GPS, el rechazo sin GPS válido, la evidencia y el monitoreo mientras se navega.
 - [ ] Verificar que otro trabajador no puede consultar ni modificar la asignación.
 - [ ] Publicar las mejoras locales de interfaz y búsqueda cuando estén revisadas.
-- [ ] Preparar el enlace de entrega con documentación, proyecto completo, APK y copia autorizada de la base.
+- [ ] Preparar el enlace HTTPS de la PWA con documentación, proyecto completo y copia autorizada de la base.
 
 ## Preparación
 
 1. Con autorización para cambios de esquema, aplicar `database/extensions/10_OperacionesAgua.sql` a la base existente. El script agrega tablas de operaciones y registra los roles oficiales ausentes. La aplicación no ejecuta el script al iniciar.
 2. En **Administración**, asignar **Cortador** o **Reconector** a una cuenta activa. SQL conserva el nombre oficial `Reconexion`. El trabajador debe iniciar sesión nuevamente.
 3. En **Registros → Códigos Fijos**, abrir una conexión Normal autorizada para la prueba y pulsar **Marcar para corte**. Las reconexiones se planifican con conexiones en estado Cortado. En la revisión local, las 6.271 conexiones estaban en estado Normal.
-4. Reiniciar la Web y usar la APK de esta versión. También se puede usar la PWA por HTTPS para capturar fotos y obtener GPS.
+4. Reiniciar la Web y abrir la PWA por HTTPS para capturar fotos y obtener GPS. Instálela desde el botón **Instalar aplicación** o desde el menú del navegador.
 
 ## Prueba de aceptación
 
 1. Como administrador, abrir **Asignaciones**, seleccionar el trabajador, indicar una cantidad y hacer clic en una calle para elegir la partida. Calcular la ruta, comprobar la numeración y guardarla.
-2. En Android, iniciar sesión como ese trabajador. Comprobar el orden, iniciar recorrido, abrir una tarea, obtener ubicación y abrir navegación externa. Confirmar en **Monitoreo** que llegan muestras nuevas durante el desplazamiento.
+2. En la PWA instalada o abierta por HTTPS en el teléfono, iniciar sesión como ese trabajador. Comprobar el orden, iniciar recorrido, abrir una tarea, obtener ubicación y abrir navegación externa. Confirmar en **Monitoreo** que llegan muestras nuevas mientras la página permanece visible.
 3. En el sitio de prueba autorizado, capturar la evidencia y guardar el resultado. Un corte realizado cambia la conexión a Cortado y una reconexión realizada a Normal. Una observación conserva el estado. Comprobar la marca de tiempo, ubicación y evidencia en **Monitoreo**.
 4. Verificar que otro trabajador no puede ver ni modificar la asignación. Probar también GPS denegado, baja precisión y falta de foto al reportar como realizado.
 
 La planificación elige iterativamente el destino alcanzable de menor coste y usa Dijkstra para cada tramo. Conecta intersecciones geométricas y ajusta los puntos a la vía cercana dentro de 250 m. Usa las geometrías disponibles en SQL, que no incluyen sentidos, giros ni niveles de paso. El trazado se limita a las vías cargadas y no garantiza el óptimo global de todas las paradas.
 
-Android 8 o superior usa un servicio de ubicación en primer plano para continuar enviando posiciones mientras el trabajador usa el navegador de rutas. Se puede detener desde **Mis tareas** o desde el control del sistema. La PWA envía muestras con la pantalla de campo visible. El flujo debe verificarse en un teléfono real.
+La PWA envía muestras con la pantalla de campo visible. El navegador puede pausar GPS, JavaScript o red en segundo plano y al cerrar la aplicación, por lo que no se afirma seguimiento continuo fuera de ese contexto. El flujo debe verificarse en un teléfono real por HTTPS.

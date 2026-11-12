@@ -1,7 +1,7 @@
-const STATIC_CACHE = 'visordatos-static-v4';
+const STATIC_CACHE = 'visordatos-static-v5';
 const OFFLINE_URL = '/offline.html';
 const STATIC_ASSETS = [
-  OFFLINE_URL, '/css/site.css', '/css/interface.css', '/js/site.js', '/js/geographic-search.js', '/icons/ui.svg',
+  OFFLINE_URL, '/css/site.css', '/css/interface.css', '/js/site.js', '/js/geographic-search.js', '/js/operations.js', '/js/perspective.js', '/icons/ui.svg',
   '/lib/bootstrap/dist/css/bootstrap.min.css', '/lib/bootstrap/dist/js/bootstrap.bundle.min.js',
   '/icons/visordatos-192.png', '/icons/visordatos-512.png', '/icons/visordatos-512-maskable.png'
 ];
