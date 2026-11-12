@@ -44,3 +44,15 @@ Se verificó sin sesión que `/Registros` y el deep link de Visor redirigen a Lo
 - Build y pruebas unitarias correctos después de incorporar manifest, Service Worker y activos PWA.
 - Pendiente de prueba física: instalación Chrome Android, Edge y Safari iOS; modo standalone, `beforeinstallprompt`, flujo PIN de Cloudflare, GPS, cámara, gestos táctiles, exportación CSV móvil y contingencia offline tras la instalación del Service Worker.
 - No se considera que la consulta GIS funcione offline: el Service Worker devuelve `offline.html` únicamente cuando falla una navegación de red.
+
+## Pruebas de privacidad y caché PWA (2026-11-12)
+
+El Service Worker usa `visordatos-static-v6`: limita el almacenamiento a extensiones públicas dentro de `/css/`, `/js/`, `/icons/` y `/lib/`; respeta `Cache-Control: private/no-store` y elimina solo versiones antiguas de su propia caché.
+
+Pruebas adicionales con Node.js 18+ (sin dependencias externas):
+
+```powershell
+node --test tests/pwa-service-worker.test.cjs
+```
+
+Los siete casos cubren exclusión de rutas privadas, funcionamiento sin conexión de CSS público, cabeceras de privacidad, navegación offline, limpieza de cachés antiguos, orígenes externos y aislamiento entre aplicaciones. Estas pruebas simulan el navegador; deben ejecutarse en el entorno del proyecto y no sustituyen la validación en Android/iOS. La cifra de 18/18 pruebas .NET registrada anteriormente no corresponde a esta nueva versión del código y requiere repetición.
