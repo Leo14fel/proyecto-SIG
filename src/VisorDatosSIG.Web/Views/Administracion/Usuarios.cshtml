@@ -1,6 +1,6 @@
 @model IEnumerable<VisorDatosSIG.Web.Models.UserAdministrationItem>
 @{ ViewData["Title"] = "Administración de usuarios"; }
-<h1>Usuarios</h1>
-<table class="table table-striped"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th>Acciones</th></tr></thead><tbody>
-@foreach (var user in Model) { <tr><td>@user.Login</td><td>@user.Nombre</td><td>@user.Roles</td><td>@(user.Activo ? "Activo" : "Inactivo")</td><td><form asp-action="CambiarEstado" method="post"><input type="hidden" name="id" value="@user.Id" /><button class="btn btn-sm btn-outline-primary">@(user.Activo ? "Desactivar" : "Activar")</button></form></td></tr> }
-</tbody></table>
+<section class="page-heading"><p class="eyebrow">Acceso restringido</p><h1>Administración de usuarios</h1><p>Consulta y mantenimiento de cuentas autorizadas.</p></section>
+<section class="admin-card"><div class="table-responsive"><table class="table align-middle mb-0"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th><span class="visually-hidden">Acciones</span></th></tr></thead><tbody>
+@foreach (var user in Model) { <tr><td><strong>@user.Login</strong></td><td>@user.Nombre</td><td>@user.Roles</td><td><span class="status-badge @(user.Activo ? "active" : "inactive")">@(user.Activo ? "Activo" : "Inactivo")</span></td><td><form asp-action="CambiarEstado" method="post" data-confirm-action="¿Confirma que desea @(user.Activo ? "desactivar" : "activar") a @user.Login?"><input type="hidden" name="id" value="@user.Id" /><button class="btn btn-sm btn-outline-primary">@(user.Activo ? "Desactivar" : "Activar")</button></form></td></tr> }
+</tbody></table></div></section>

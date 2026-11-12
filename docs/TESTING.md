@@ -8,6 +8,10 @@ Valores de inyección como `'`, `' OR 1=1 --`, `%` y `AGUILAR'--` se transmiten 
 
 Pendiente: pruebas de integración HTTP con una base SQL aislada para búsqueda, exportación, usuario inactivo, logout y autorización Administrador/Consultor. Las pruebas responsive, autenticadas y de rendimiento requieren navegador y base local; no se han registrado resultados para 360, 768 o 1366 px.
 
+## Registros geográficos
+
+Se verificó sin sesión que `/Registros` y el deep link de Visor redirigen a Login, y que `/api/registros` devuelve 401. La validación autenticada de datos reales, la selección visual de geometría y los tamaños 360/390/768/1366 requieren una sesión de prueba en navegador y quedan pendientes de una prueba manual registrada.
+
 ## Evidencia local
 
 - La cuenta local `demo.consultor` se creó fuera del repositorio con PBKDF2-SHA256, 100.000 iteraciones, salt aleatorio y rol `Consultor` activo.
@@ -24,3 +28,9 @@ Pendiente: pruebas de integración HTTP con una base SQL aislada para búsqueda,
 | Lote | Pendiente de medición repetida en navegador |
 | GeoJSON Manzanas | Pendiente de medición repetida en navegador |
 | Lotes por bbox | Pendiente de medición repetida en navegador |
+
+## PWA
+
+- Build y pruebas unitarias correctos después de incorporar manifest, Service Worker y activos PWA.
+- Pendiente de prueba física: instalación Chrome Android, modo standalone, `beforeinstallprompt`, flujo PIN de Cloudflare, gestos táctiles, exportación CSV móvil y contingencia offline tras la instalación del Service Worker.
+- No se considera que la consulta GIS funcione offline: el Service Worker devuelve `offline.html` únicamente cuando falla una navegación de red.

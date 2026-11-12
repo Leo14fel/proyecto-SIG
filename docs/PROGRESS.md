@@ -25,3 +25,16 @@ Lotes no se carga al abrir el mapa. Se habilita desde zoom 16 y se limita a la e
 - Administración mínima de usuarios y Mi Perfil implementados con autorización de servidor y cambio PBKDF2.
 - La interfaz del migrador informa capa, procesados/total, exitosos, omitidos, fallidos, porcentaje y tiempo transcurrido mediante `IProgress<T>`; cancelar conserva el rollback.
 - Sin tabla oficial para bitácora de acceso; el registro persistente de login queda pendiente.
+
+## PWA
+
+- Manifest instalable, iconos propios, modo `standalone`, metadatos móviles y experiencia de instalación opcional para Android/iOS.
+- Service Worker restringido a activos públicos; Login, APIs, visor, CSV, administración y respuestas autenticadas nunca se cachean.
+- Página offline de contingencia; no hay uso GIS offline.
+- Soporte de proxy reenviado limitado a loopback para túneles locales como `cloudflared`.
+
+## Navegación y registros
+
+- Sidebar local SVG, accesible por teclado, contraíble en escritorio y offcanvas en móvil. Administración sigue oculta para Consultor y protegida por autorización en servidor.
+- `/Registros` y `/Registros/{capa}/{id}` reutilizan `SqlLayerService`; la API `/api/registros` pagina atributos sin recuperar geometrías.
+- El visor admite enlaces por PK (`/Visor?capa={capa}&id={id}`) y carga una geometría temporal para selección directa, incluido Lotes.

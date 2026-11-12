@@ -57,7 +57,7 @@
         </div>
         <div id="selection" class="selection-panel" hidden></div>
         <p id="map-message" class="map-message" role="status"></p>
-        <div class="viewer-notice">Lotes se carga por extensión visible y desde zoom 16 para preservar el rendimiento.</div>
+        <div class="viewer-notice">Lotes se carga por extensión visible desde zoom 16. Códigos Fijos se carga por extensión visible desde zoom 15 para evitar saturación.</div>
     </aside>
     <div id="map" aria-label="Mapa de capas catastrales"></div>
 </section>
@@ -71,6 +71,9 @@
             maxZoom: 20,
             attribution: '&copy; OpenStreetMap contributors'
         }).addTo(map);
+        const mapElement = document.getElementById('map');
+        new ResizeObserver(() => map.invalidateSize({ pan: false })).observe(mapElement);
+        window.addEventListener('orientationchange', () => setTimeout(() => map.invalidateSize({ pan: false }), 150));
 
         const styles = {
             'manzanas': { color: '#0f766e', weight: 1.4, fillColor: '#2dd4bf', fillOpacity: 0.12 },
@@ -163,7 +166,19 @@
             clear.className = 'btn btn-outline-secondary btn-sm';
             clear.textContent = 'Limpiar selección';
             clear.addEventListener('click', clearSelection);
-            actions.append(zoom, clear);
+            const details = document.createElement('a');
+            details.className = 'btn btn-outline-primary btn-sm';
+            details.textContent = 'Ver detalle';
+            details.href = `/Registros/${encodeURIComponent(key)}/${encodeURIComponent(feature.id)}?volver=${encodeURIComponent('/Visor')}`;
+            const back = new URLSearchParams(location.search).get('volver');
+            if (back) {
+                const returnButton = document.createElement('a');
+                returnButton.className = 'btn btn-primary btn-sm';
+                returnButton.textContent = 'Volver a resultados';
+                returnButton.href = back;
+                actions.append(returnButton);
+            }
+            actions.append(zoom, details, clear);
             content.append(heading, list, actions);
             return content;
         }
@@ -218,9 +233,10 @@
 
         async function loadLayer(key) {
             if (layers[key]) return;
-            if (key === 'lotes' && map.getZoom() < 16) {
+            const minimumZoom = key === 'lotes' ? 16 : key === 'codigos-fijos' ? 15 : 0;
+            if (map.getZoom() < minimumZoom) {
                 document.getElementById(`layer-${key}`).checked = false;
-                setMessage('Para cargar Lotes, acerque el mapa al nivel 16 o superior.', true);
+                setMessage(`Para cargar ${metadata[key]?.name || key}, acerque el mapa al nivel ${minimumZoom} o superior.`, true);
                 return;
             }
             const state = document.getElementById(`state-${key}`);
@@ -228,7 +244,7 @@
             setMessage('');
             try {
                 let url = `/api/capas/${encodeURIComponent(key)}/geojson`;
-                if (key === 'lotes') {
+                if (key === 'lotes' || key === 'codigos-fijos') {
                     const bounds = map.getBounds();
                     url += `?minX=${bounds.getWest()}&minY=${bounds.getSouth()}&maxX=${bounds.getEast()}&maxY=${bounds.getNorth()}`;
                 }
@@ -257,7 +273,7 @@
                 items.forEach(item => { metadata[item.key] = item; buildLayerControl(item); });
                 const extent = items.map(item => item.boundingBox).find(Boolean);
                 if (extent) map.fitBounds([[extent[1], extent[0]], [extent[3], extent[2]]]);
-                ['manzanas', 'codigos-fijos', 'vias'].forEach(loadLayer);
+                ['manzanas', 'vias'].forEach(loadLayer);
             })
             .catch(() => setMessage('No fue posible consultar las capas SQL.', true));
 
@@ -388,6 +404,15 @@
             } catch (error) {
                 setMessage(error.message, true);
             }
+        }
+
+        const deepLink = new URLSearchParams(location.search);
+        const selectedLayer = deepLink.get('capa');
+        const selectedId = Number(deepLink.get('id'));
+        if (['manzanas', 'lotes', 'codigos-fijos', 'vias'].includes(selectedLayer) && Number.isInteger(selectedId) && selectedId > 0) {
+            window.addEventListener('load', () => showSearchFeature(selectedLayer, selectedId), { once: true });
+        } else if (deepLink.has('capa') || deepLink.has('id')) {
+            setMessage('El enlace del visor no es válido.', true);
         }
 
         function highlightSearchResult(key, id) {

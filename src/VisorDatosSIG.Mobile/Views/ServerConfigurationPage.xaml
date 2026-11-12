@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="VisorDatosSIG.Mobile.Views.ServerConfigurationPage"
+             Title="Configuración">
+    <ScrollView>
+        <VerticalStackLayout Padding="28" Spacing="18" VerticalOptions="Center">
+            <Label Text="VisorDatosSIG" Style="{StaticResource PageTitle}" />
+            <Label Text="Configuración del servidor" Style="{StaticResource PageSubtitle}" />
+            <Label Text="Ingresa la dirección del sistema. No se almacenan usuarios ni contraseñas en el teléfono."
+                   Style="{StaticResource PageBody}" />
+            <VerticalStackLayout Spacing="6">
+                <Label Text="URL del servidor" Style="{StaticResource PageBody}" />
+                <Entry x:Name="ServerUrlEntry" Keyboard="Url" Placeholder="http://10.0.2.2:5060"
+                       ReturnType="Go" Completed="OnSaveClicked" />
+                <Label Text="Emulador: http://10.0.2.2:5060 · Teléfono: http://IP_DEL_PC:5060"
+                       Style="{StaticResource PageCaption}" />
+            </VerticalStackLayout>
+            <Label x:Name="StatusLabel" IsVisible="False" Style="{StaticResource PageStatus}" />
+            <ActivityIndicator x:Name="BusyIndicator" IsVisible="False" IsRunning="False" Color="#0F766E" />
+            <Button Text="PROBAR CONEXIÓN" Clicked="OnTestConnectionClicked" />
+            <Button Text="GUARDAR Y CONTINUAR" Clicked="OnSaveClicked" Style="{StaticResource PrimaryButton}" />
+        </VerticalStackLayout>
+    </ScrollView>
+</ContentPage>

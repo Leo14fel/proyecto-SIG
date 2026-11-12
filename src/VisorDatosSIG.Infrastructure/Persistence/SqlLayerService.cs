@@ -16,6 +16,7 @@ public interface ISqlLayerService
     Task<IReadOnlyList<SqlLayerFeature>> GetFeaturesAsync(string layerKey, Envelope? bbox, int limit, CancellationToken cancellationToken = default);
     Task<SqlLayerFeature?> GetFeatureAsync(string layerKey, int id, CancellationToken cancellationToken = default);
     Task<SqlSearchPage> SearchAsync(string layerKey, string query, int page, int pageSize, string? field = null, string? comparison = null, CancellationToken cancellationToken = default);
+    Task<SqlSearchPage> BrowseAsync(string layerKey, string? query, int page, int pageSize, string? field = null, string? comparison = null, CancellationToken cancellationToken = default);
 }
 
 public sealed class SqlLayerService(VisorDatosSigDbContext dbContext) : ISqlLayerService
@@ -75,10 +76,13 @@ public sealed class SqlLayerService(VisorDatosSigDbContext dbContext) : ISqlLaye
         _ => throw new KeyNotFoundException($"La capa '{layerKey}' no existe.")
     };
 
-    public async Task<SqlSearchPage> SearchAsync(string layerKey, string query, int page, int pageSize, string? field = null, string? comparison = null, CancellationToken cancellationToken = default)
+    public Task<SqlSearchPage> SearchAsync(string layerKey, string query, int page, int pageSize, string? field = null, string? comparison = null, CancellationToken cancellationToken = default)
+        => BrowseAsync(layerKey, query, page, pageSize, field, comparison, cancellationToken);
+
+    public async Task<SqlSearchPage> BrowseAsync(string layerKey, string? query, int page, int pageSize, string? field = null, string? comparison = null, CancellationToken cancellationToken = default)
     {
         ValidateKey(layerKey);
-        query = query.Trim().ToLowerInvariant();
+        query = query?.Trim().ToLowerInvariant() ?? string.Empty;
         page = Math.Max(page, 1);
         pageSize = Math.Clamp(pageSize, 1, 100);
         var skip = (page - 1) * pageSize;

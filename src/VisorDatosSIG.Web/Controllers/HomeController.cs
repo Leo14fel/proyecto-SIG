@@ -20,6 +20,11 @@ public class HomeController(ISqlLayerService layers) : Controller
         return View();
     }
 
+    public IActionResult Ayuda()
+    {
+        return View();
+    }
+
     [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
     public IActionResult Error()
     {

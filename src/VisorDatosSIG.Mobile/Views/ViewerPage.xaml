@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<ContentPage xmlns="http://schemas.microsoft.com/dotnet/2021/maui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2009/xaml"
+             x:Class="VisorDatosSIG.Mobile.Views.ViewerPage"
+             Title="VisorDatosSIG">
+    <Grid RowDefinitions="Auto,Auto,*">
+        <Grid Grid.Row="0" Padding="12,10" ColumnDefinitions="*,Auto,Auto" BackgroundColor="#142F4A">
+            <Label Text="VisorDatosSIG" TextColor="White" FontAttributes="Bold" FontSize="18" VerticalOptions="Center" />
+            <Button Grid.Column="1" Text="↻" Clicked="OnRetryClicked" Style="{StaticResource HeaderButton}" SemanticProperties.Description="Recargar" />
+            <Button Grid.Column="2" Text="Servidor" Clicked="OnChangeServerClicked" Style="{StaticResource HeaderButton}" />
+        </Grid>
+        <Grid x:Name="ConnectionErrorPanel" Grid.Row="1" Padding="14" BackgroundColor="#FEF2F2" IsVisible="False" ColumnDefinitions="*,Auto,Auto">
+            <Label x:Name="ConnectionErrorLabel" TextColor="#991B1B" VerticalOptions="Center" />
+            <Button Grid.Column="1" Text="Reintentar" Clicked="OnRetryClicked" Style="{StaticResource CompactButton}" />
+            <Button Grid.Column="2" Text="Cambiar" Clicked="OnChangeServerClicked" Style="{StaticResource CompactButton}" />
+        </Grid>
+        <WebView x:Name="Browser" Grid.Row="2" Navigating="OnWebViewNavigating" Navigated="OnWebViewNavigated" />
+    </Grid>
+</ContentPage>

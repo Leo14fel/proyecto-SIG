@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#142f4a">
+  <title>Sin conexión · VisorDatosSIG</title>
+  <style>
+    :root { color: #172033; background: #f4f7fa; font-family: "Segoe UI", Arial, sans-serif; }
+    body { min-height: 100vh; margin: 0; display: grid; place-items: center; padding: 1.5rem; box-sizing: border-box; }
+    main { width: min(100%, 26rem); padding: 2rem; border-radius: 1rem; background: #fff; box-shadow: 0 16px 48px #0f172a1f; text-align: center; }
+    .map { width: 4rem; height: 4rem; margin: 0 auto 1.25rem; display: grid; place-items: center; border-radius: 1rem; color: #fff; background: #0f766e; font-size: 2rem; }
+    h1 { margin: 0; color: #142f4a; font-size: 1.65rem; } p { color: #526075; line-height: 1.55; } button { border: 0; border-radius: .45rem; padding: .75rem 1rem; color: #fff; background: #142f4a; font: inherit; font-weight: 700; cursor: pointer; }
+  </style>
+</head>
+<body>
+  <main>
+    <div class="map" aria-hidden="true">⌖</div>
+    <h1>Sin conexión</h1>
+    <p>No se puede conectar con VisorDatosSIG. Comprueba tu conexión a Internet e inténtalo nuevamente.</p>
+    <button type="button" onclick="window.location.reload()">REINTENTAR</button>
+  </main>
+</body>
+</html>

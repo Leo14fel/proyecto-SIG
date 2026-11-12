@@ -1,0 +1,16 @@
+@model VisorDatosSIG.Web.Models.GeographicRecordDetailViewModel
+@{ ViewData["Title"] = $"Detalle {Model.LayerName}"; }
+<nav class="breadcrumb" aria-label="Miga de pan"><a href="@Model.ReturnUrl">Registros geográficos</a><span aria-hidden="true">/</span><span>@Model.LayerName</span></nav>
+<section class="detail-card">
+    <p class="eyebrow">@Model.LayerName</p>
+    <h1>Registro #@Model.Id</h1>
+    <p>Información oficial almacenada en SQL Server.</p>
+    <dl class="record-detail-list">
+    @foreach (var property in Model.Properties)
+    { <dt>@property.Key</dt><dd>@(property.Value ?? "—")</dd> }
+    </dl>
+    <div class="detail-actions">
+        <a class="btn btn-primary" href="/Visor?capa=@Uri.EscapeDataString(Model.LayerKey)&id=@Model.Id&volver=@Uri.EscapeDataString(Model.ReturnUrl)">Ver en visor</a>
+        <a class="btn btn-outline-secondary" href="@Model.ReturnUrl">Volver a resultados</a>
+    </div>
+</section>

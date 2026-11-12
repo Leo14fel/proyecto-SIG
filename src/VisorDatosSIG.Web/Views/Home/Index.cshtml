@@ -3,11 +3,9 @@
     ViewData["Title"] = "Panel de capas";
 }
 
-<section class="dashboard-header">
-    <p class="eyebrow">VisorDatosSIG</p>
-    <h1>Panel principal</h1>
-    <p>Conteos consultados directamente desde SQL Server.</p>
-    <a class="btn btn-primary btn-lg" asp-controller="Visor" asp-action="Index">ABRIR VISOR</a>
+<section class="dashboard-header dashboard-hero">
+    <div><p class="eyebrow">VisorDatosSIG</p><h1>Panel principal</h1><p>Información cartográfica oficial, consultada directamente desde SQL Server.</p></div>
+    <div class="dashboard-actions"><a class="btn btn-primary" asp-controller="Visor" asp-action="Index">Abrir visor</a><a class="btn btn-outline-primary" asp-controller="Registros" asp-action="Index">Explorar registros</a></div>
 </section>
 <section class="layer-cards">
 @foreach (var layer in Model)
@@ -19,4 +17,5 @@
     </article>
 }
 </section>
-<aside class="diagnostic-notice">Las capas del visor y sus conteos se consultan desde SQL Server. La API de diagnóstico SHP solo está disponible en Development.</aside>
+<section class="quick-actions" aria-label="Accesos rápidos"><a asp-controller="Visor" asp-action="Index">Abrir visor cartográfico</a><a asp-controller="Registros" asp-action="Index" asp-route-capa="lotes">Consultar lotes</a><a asp-controller="Registros" asp-action="Index" asp-route-capa="codigos-fijos">Buscar persona o código</a></section>
+<aside class="diagnostic-notice">Las capas y los conteos se consultan desde SQL Server.</aside>

@@ -32,3 +32,9 @@ EF Core se usa para consultas SQL parametrizadas. Los scripts originales se cons
 La Web requiere autenticación mediante los usuarios y roles de SQL Server. Configure `ConnectionStrings:DefaultConnection` mediante User Secrets antes de iniciar. La guía completa se encuentra en `docs/AUTHENTICATION.md`.
 
 Consulte `docs/API.md`, `docs/USER_MANUAL.md`, `docs/TESTING.md` y `docs/TRACEABILITY.md` para operación y límites conocidos.
+
+La navegación actual incluye `/Registros`: listados SQL paginados por capa, detalle individual y enlaces directos al visor por clave primaria. Consulte `docs/REGISTROS_GEOGRAFICOS.md`.
+
+## PWA
+
+La Web puede instalarse como PWA desde un origen HTTPS. La aplicación mantiene las consultas y la autenticación en el servidor; el modo offline solo muestra una página de contingencia y nunca cachea datos privados ni GIS. Consulte [docs/PWA.md](docs/PWA.md) para instalación móvil, caché, Cloudflare Quick Tunnel y las limitaciones de un hostname temporal.

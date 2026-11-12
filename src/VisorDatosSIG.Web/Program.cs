@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 using VisorDatosSIG.Application.Authentication;
 using VisorDatosSIG.Infrastructure.Authentication;
 using VisorDatosSIG.Infrastructure.Persistence;
@@ -26,8 +28,20 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
     options.AccessDeniedPath = "/Cuenta/AccesoDenegado";
 });
 builder.Services.AddAuthorization(options => options.AddPolicy("Administrador", policy => policy.RequireRole("Administrador")));
+builder.Services.Configure<ForwardedHeadersOptions>(options =>
+{
+    options.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+    options.KnownIPNetworks.Clear();
+    options.KnownProxies.Clear();
+    options.KnownProxies.Add(IPAddress.Loopback);
+    options.KnownProxies.Add(IPAddress.IPv6Loopback);
+});
 
 var app = builder.Build();
+
+// Cloudflared connects to the local origin over loopback. Only that trusted
+// proxy may supply the original HTTPS scheme used for secure cookies/redirects.
+app.UseForwardedHeaders();
 
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())

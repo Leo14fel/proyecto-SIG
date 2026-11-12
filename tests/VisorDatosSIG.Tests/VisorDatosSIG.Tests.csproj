@@ -15,6 +15,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <Using Include="Xunit" />
   </ItemGroup>
 
@@ -22,6 +23,7 @@
     <ProjectReference Include="..\..\src\VisorDatosSIG.Domain\VisorDatosSIG.Domain.csproj" />
     <ProjectReference Include="..\..\src\VisorDatosSIG.Application\VisorDatosSIG.Application.csproj" />
     <ProjectReference Include="..\..\src\VisorDatosSIG.Infrastructure\VisorDatosSIG.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\VisorDatosSIG.Web\VisorDatosSIG.Web.csproj" />
   </ItemGroup>
 
 </Project>

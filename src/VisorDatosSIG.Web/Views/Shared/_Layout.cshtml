@@ -1,52 +1,57 @@
-﻿<!DOCTYPE html>
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    var action = ViewContext.RouteData.Values["action"]?.ToString();
+    bool IsActive(string target, string? targetAction = null) => string.Equals(controller, target, StringComparison.OrdinalIgnoreCase) && (targetAction is null || string.Equals(action, targetAction, StringComparison.OrdinalIgnoreCase));
+}
+<!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#142f4a" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <title>@ViewData["Title"] - VisorDatosSIG</title>
+    <partial name="_PwaHead" />
     <script type="importmap"></script>
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
     <link rel="stylesheet" href="~/VisorDatosSIG.Web.styles.css" asp-append-version="true" />
 </head>
-<body>
-    <header>
-        <nav class="navbar navbar-expand-sm navbar-toggleable-sm app-nav">
-            <div class="container-fluid">
-                <a class="navbar-brand" asp-area="" asp-controller="Home" asp-action="Index">VisorDatosSIG <span>v0.1</span></a>
-                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target=".navbar-collapse" aria-controls="navbarSupportedContent"
-                        aria-expanded="false" aria-label="Toggle navigation">
-                    <span class="navbar-toggler-icon"></span>
-                </button>
-                <div class="navbar-collapse collapse d-sm-inline-flex justify-content-between">
-                    <ul class="navbar-nav flex-grow-1">
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Home" asp-action="Index">Panel</a>
-                        </li>
-                        <li class="nav-item">
-                            <a class="nav-link" asp-area="" asp-controller="Visor" asp-action="Index">Visor</a>
-                        </li>
-                        @if (User.IsInRole("Administrador")) { <li class="nav-item"><a class="nav-link" asp-controller="Administracion" asp-action="Usuarios">Administración</a></li> }
-                    </ul>
-                    <div class="d-flex align-items-center gap-3 text-white">
-                        <a class="nav-link small" asp-controller="CuentaPerfil" asp-action="MiPerfil">@User.Identity?.Name @if (User.IsInRole("Administrador")) { <text>(Administrador)</text> }</a>
-                        <form asp-controller="Cuenta" asp-action="Logout" method="post"><button type="submit" class="btn btn-sm btn-outline-light">Cerrar sesión</button></form>
-                    </div>
-                </div>
-            </div>
+<body class="app-shell">
+    <svg class="svg-symbols" aria-hidden="true"><defs>
+        <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+        <symbol id="i-map" viewBox="0 0 24 24"><path d="m3 6 6-3 6 3 6-3v15l-6 3-6-3-6 3z"/><path d="M9 3v15M15 6v15"/></symbol>
+        <symbol id="i-data" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v7c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12v7c0 1.7 3.6 3 8 3s8-1.3 8-3v-7"/></symbol>
+        <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c.8-4 3.4-6 8-6s7.2 2 8 6"/></symbol>
+        <symbol id="i-users" viewBox="0 0 24 24"><circle cx="9" cy="8" r="3"/><circle cx="17" cy="9" r="2"/><path d="M3 20c.7-3.6 2.7-5.5 6-5.5s5.3 1.9 6 5.5M15 15c3.2-.2 5.1 1.4 5.8 4.5"/></symbol>
+        <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9a2.5 2.5 0 1 1 4.3 1.7c-1.2 1.2-1.8 1.7-1.8 3.3M12 17h.01"/></symbol>
+        <symbol id="i-log-out" viewBox="0 0 24 24"><path d="M10 4H5v16h5M14 8l4 4-4 4M18 12H9"/></symbol>
+        <symbol id="i-menu" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></symbol>
+    </defs></svg>
+    <button id="sidebar-toggle" class="sidebar-mobile-toggle" type="button" aria-label="Abrir navegación" aria-controls="app-sidebar" aria-expanded="false"><svg><use href="#i-menu" /></svg></button>
+    <div id="sidebar-backdrop" class="sidebar-backdrop" hidden></div>
+    <aside id="app-sidebar" class="app-sidebar" aria-label="Navegación principal">
+        <div class="sidebar-brand"><svg aria-hidden="true"><use href="#i-map" /></svg><span>VisorDatosSIG</span><button id="sidebar-collapse" type="button" class="sidebar-collapse" aria-label="Contraer navegación" title="Contraer navegación">‹</button></div>
+        <nav class="sidebar-nav">
+            <a class="@(IsActive("Home", "Index") ? "active" : "")" asp-controller="Home" asp-action="Index" title="Panel principal"><svg aria-hidden="true"><use href="#i-grid" /></svg><span>Panel principal</span></a>
+            <a class="@(IsActive("Visor") ? "active" : "")" asp-controller="Visor" asp-action="Index" title="Visor cartográfico"><svg aria-hidden="true"><use href="#i-map" /></svg><span>Visor cartográfico</span></a>
+            <a class="@(IsActive("Registros") ? "active" : "")" asp-controller="Registros" asp-action="Index" title="Registros geográficos"><svg aria-hidden="true"><use href="#i-data" /></svg><span>Registros geográficos</span></a>
+            @if (User.IsInRole("Administrador")) { <a class="@(IsActive("Administracion") ? "active" : "")" asp-controller="Administracion" asp-action="Usuarios" title="Administración"><svg aria-hidden="true"><use href="#i-users" /></svg><span>Administración</span></a> }
+            <a class="@(IsActive("Home", "Ayuda") ? "active" : "")" asp-controller="Home" asp-action="Ayuda" title="Ayuda"><svg aria-hidden="true"><use href="#i-help" /></svg><span>Ayuda</span></a>
         </nav>
-    </header>
-    <div class="container app-content">
-        <main role="main" class="pb-3">
-            @RenderBody()
-        </main>
-    </div>
-
-    <footer class="footer">
-        <div class="container">
-            &copy; 2026 VisorDatosSIG | Demo técnica de avance
+        <div class="sidebar-account">
+            <a asp-controller="CuentaPerfil" asp-action="MiPerfil" title="Mi perfil"><svg aria-hidden="true"><use href="#i-user" /></svg><span><b>@User.Identity?.Name</b><small>@(User.IsInRole("Administrador") ? "Administrador" : "Consultor")</small></span></a>
+            <form asp-controller="Cuenta" asp-action="Logout" method="post"><button type="submit" title="Cerrar sesión"><svg aria-hidden="true"><use href="#i-log-out" /></svg><span>Cerrar sesión</span></button></form>
         </div>
-    </footer>
+    </aside>
+    <div class="app-main">
+        <header class="app-topbar"><div class="breadcrumb"><span>VisorDatosSIG</span><span aria-hidden="true">/</span><strong>@ViewData["Title"]</strong></div></header>
+        <main class="app-content" role="main">@RenderBody()</main>
+        <footer class="footer">&copy; 2026 VisorDatosSIG</footer>
+    </div>
+    <partial name="_PwaInstallPrompt" />
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
