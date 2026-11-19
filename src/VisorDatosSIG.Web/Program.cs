@@ -5,6 +5,7 @@ using System.Net;
 using VisorDatosSIG.Application.Authentication;
 using VisorDatosSIG.Infrastructure.Authentication;
 using VisorDatosSIG.Infrastructure.Persistence;
+using VisorDatosSIG.Web;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,6 +17,7 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 builder.Services.AddDbContext<VisorDatosSigDbContext>(options => options.UseSqlServer(connectionString, sql => sql.UseNetTopologySuite()));
 builder.Services.AddScoped<IAuthenticationService, SqlAuthenticationService>();
 builder.Services.AddScoped<ISqlLayerService, SqlLayerService>();
+builder.Services.AddHostedService<DemoAccountSeeder>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
 {
     options.Cookie.Name = "VisorDatosSIG.Auth";
